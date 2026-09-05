@@ -12,9 +12,7 @@ Description: A companion to the Gyro customer-equity budgeting tool. Gyro
     performs no equity computation.
 License: MIT + file LICENSE
 Imports:
-    bslib (>= 0.5.0),
     config,
-    DT,
     golem,
     jsonlite,
     jsonvalidate,

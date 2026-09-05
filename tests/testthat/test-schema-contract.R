@@ -20,14 +20,13 @@ test_that("the bundled snapshot has not drifted from installed Gyro", {
 })
 
 test_that("write_params writes valid files and refuses invalid ones", {
-  scn <- read_scenario(app_sys("demo-scenarios", "coffee-portfolio.json"))
+  p <- build_params(question_spec(), ma_answers())
   out <- tempfile(fileext = ".json")
-  expect_invisible(write_params(scn, out))
+  expect_invisible(write_params(p, out))
   expect_true(file.exists(out))
-  reread <- read_scenario(out)
-  expect_equal(reread$mode, "ma")
+  expect_equal(jsonlite::fromJSON(out)$mode, "ma")
 
-  bad <- scn
+  bad <- p
   bad$engine$nest_similarity <- 1.7
   out2 <- tempfile(fileext = ".json")
   err <- expect_error(write_params(bad, out2), "nothing written")
