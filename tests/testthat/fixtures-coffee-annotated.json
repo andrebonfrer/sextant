@@ -1,0 +1,148 @@
+{
+  "schema_version": 2,
+  "app": "Gyro",
+  "app_version": "0.3.0.9000",
+  "created_at": "2026-09-03T01:24:53+0000",
+  "metadata": {
+    "scenario_name": "Demo: Coffee portfolio under one house brand",
+    "author": "Gyro demos",
+    "notes": "Two owned lines — a premium and a value coffee — share the Summit parent brand and are close substitutes (within-brand similarity 0.6). One bucket pushes a single line (watch the cannibalisation in its substitution split), one lifts the whole masterbrand, and one is a pure price cut. Built for the portfolio exercise in the manager worksheet."
+  },
+  "decisions": {
+    "status": [
+      "Proposed",
+      "Approved",
+      "Revisit"
+    ],
+    "notes": "Masterbrand approved; line push and price cut under discussion."
+  },
+  "mode": "ma",
+  "settings": {
+    "market_potential": 500000,
+    "periods": 4,
+    "frequency": 60,
+    "quantity": 1,
+    "discount_rate": 0.1
+  },
+  "engine": {
+    "brands": [
+      "Peak Reserve (you)",
+      "Summit Daily (you)",
+      "Cafe Rival"
+    ],
+    "attributes": [
+      "Taste quality",
+      "Availability"
+    ],
+    "ratings": [
+      [
+        4.2,
+        3
+      ],
+      [
+        3.4,
+        4
+      ],
+      [
+        3.6,
+        3.6
+      ]
+    ],
+    "importance": [
+      1.1,
+      0.9
+    ],
+    "price": [
+      6.5,
+      4.5,
+      5
+    ],
+    "price_sensitivity": -0.35,
+    "intercepts": [
+      0,
+      0,
+      0
+    ],
+    "loyalty": 1.2,
+    "initial_shares": null,
+    "unit_costs": [
+      3,
+      2.2,
+      2.4
+    ],
+    "max_rating": 5,
+    "owned": [
+      true,
+      true,
+      false
+    ],
+    "parents": [
+      "Summit Coffee",
+      "Summit Coffee",
+      "Rival"
+    ],
+    "nest_similarity": 0.6,
+    "pricing": {
+      "mode": [
+        "fixed",
+        "fixed",
+        "fixed"
+      ],
+      "optimised_price": null
+    }
+  },
+  "investments": {
+    "buckets": [
+      "Reserve taste push",
+      "Summit masterbrand campaign",
+      "Daily price cut"
+    ],
+    "spend_per_period": [
+      900000,
+      1500000,
+      0
+    ],
+    "uplift": [
+      [
+        0.4,
+        0,
+        0
+      ],
+      [
+        0,
+        0.3,
+        0
+      ]
+    ],
+    "targets": [
+      "Peak Reserve (you)",
+      "parent:Summit Coffee",
+      "Summit Daily (you)"
+    ],
+    "price_change": [
+      0,
+      0,
+      -0.5
+    ]
+  },
+  "results": null,
+  "annotations": {
+    "engine/price_sensitivity": {
+      "source": "assumed",
+      "rationale": "No experimental estimate; -0.35 reflects a price-conscious grab-and-go category."
+    },
+    "engine/nest_similarity": {
+      "source": "assumed",
+      "rationale": "Lines share brand and shelf; 0.6 encodes strong within-brand substitution pending switching data."
+    },
+    "engine/ratings": {
+      "source": "benchmark",
+      "rationale": "Blind taste panel and distribution audit, Q2."
+    },
+    "engine/brands/0": {
+      "source": "stated",
+      "location": "AU metro grocery",
+      "rationale": "Focal premium line as named by the brand team."
+    }
+  }
+}

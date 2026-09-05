@@ -1,0 +1,29 @@
+Package: sextant
+Title: Parameter Provenance and Elicitation for Gyro Scenarios
+Version: 0.1.0
+Authors@R: 
+    person("Andre", "Bonfrer", email = "abonfrer@me.com", role = c("aut", "cre"))
+Description: A companion to the Gyro customer-equity budgeting tool. Gyro
+    prices managerial judgements; sextant records where those judgements
+    come from. It reads and writes Gyro scenario files (schema v2),
+    attaches provenance annotations per parameter (source, rationale,
+    location), measures annotation coverage with attention to high-stakes
+    judgements, and produces a provenance report for budget meetings. It
+    performs no equity computation.
+License: MIT + file LICENSE
+Imports:
+    bslib (>= 0.5.0),
+    config,
+    DT,
+    golem,
+    jsonlite,
+    pkgload,
+    purrr,
+    rlang,
+    shiny (>= 1.6.0)
+Suggests:
+    jsonvalidate,
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3
+Encoding: UTF-8
+RoxygenNote: 7.3.1

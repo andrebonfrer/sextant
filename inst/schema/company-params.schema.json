@@ -1,0 +1,207 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/andrebonfrer/Gyro/inst/schema/company-params.schema.json",
+  "title": "Gyro scenario (company parameters)",
+  "description": "A Gyro scenario file: settings, demand-engine parameters, investment buckets, decisions and optional annotations. Accepts both the v1 single-owned-line shorthand (no owned/parents/nest_similarity/pricing/targets/price_change fields) and the full v2 portfolio format; the loader migrates v1 to v2 in memory. Length-one vectors may serialise as JSON scalars.",
+  "type": "object",
+  "required": ["schema_version", "mode", "settings", "engine", "investments"],
+  "properties": {
+    "schema_version": { "type": "integer", "minimum": 1, "maximum": 2 },
+    "app": { "type": "string" },
+    "app_version": { "type": "string" },
+    "created_at": { "type": "string" },
+    "mode": { "enum": ["ma", "funnel"] },
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "scenario_name": { "type": "string" },
+        "author": { "type": "string" },
+        "notes": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "decisions": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "oneOf": [
+            { "$ref": "#/definitions/status" },
+            { "type": "array", "items": { "$ref": "#/definitions/status" } }
+          ]
+        },
+        "notes": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "settings": {
+      "type": "object",
+      "required": ["market_potential", "periods", "frequency", "quantity",
+                   "discount_rate"],
+      "properties": {
+        "market_potential": { "type": "number", "minimum": 0 },
+        "periods": { "type": "integer", "minimum": 1 },
+        "frequency": { "type": "number", "exclusiveMinimum": 0 },
+        "quantity": { "type": "number", "exclusiveMinimum": 0 },
+        "discount_rate": { "type": "number", "minimum": 0 }
+      },
+      "additionalProperties": true
+    },
+    "engine": { "type": "object" },
+    "investments": {
+      "type": "object",
+      "required": ["buckets", "spend_per_period", "uplift"],
+      "properties": {
+        "buckets": { "$ref": "#/definitions/strOrArray" },
+        "spend_per_period": { "$ref": "#/definitions/nonNegOrArray" },
+        "uplift": { "$ref": "#/definitions/matrix" },
+        "targets": {
+          "oneOf": [{ "$ref": "#/definitions/strOrArray" },
+                    { "type": "null" }]
+        },
+        "price_change": { "$ref": "#/definitions/numOrArray" }
+      },
+      "additionalProperties": true
+    },
+    "results": {},
+    "annotations": {
+      "type": "object",
+      "description": "Engine-ignored provenance for the coming elicitation layer, keyed by parameter path (e.g. 'engine/price_sensitivity').",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "source": { "enum": ["stated", "benchmark", "assumed"] },
+          "rationale": { "type": "string" },
+          "location": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "mode": { "const": "ma" } } },
+      "then": {
+        "properties": {
+          "engine": {
+            "type": "object",
+            "required": ["brands", "attributes", "ratings", "importance",
+                         "price", "price_sensitivity", "unit_costs"],
+            "properties": {
+              "brands": { "$ref": "#/definitions/strOrArray" },
+              "attributes": { "$ref": "#/definitions/strOrArray" },
+              "ratings": { "$ref": "#/definitions/matrix" },
+              "importance": { "$ref": "#/definitions/numOrArray" },
+              "price": { "$ref": "#/definitions/nonNegOrArray" },
+              "price_sensitivity": { "type": "number", "maximum": 0 },
+              "intercepts": { "$ref": "#/definitions/numOrArray" },
+              "loyalty": { "type": "number", "minimum": 0 },
+              "initial_shares": {
+                "oneOf": [{ "$ref": "#/definitions/unitOrArray" },
+                          { "type": "null" }]
+              },
+              "unit_costs": { "$ref": "#/definitions/nonNegOrArray" },
+              "max_rating": { "type": "number", "exclusiveMinimum": 0 },
+              "owned": { "$ref": "#/definitions/boolOrArray" },
+              "parents": { "$ref": "#/definitions/strOrArray" },
+              "nest_similarity": {
+                "type": "number", "exclusiveMinimum": 0, "maximum": 1
+              },
+              "pricing": {
+                "type": "object",
+                "properties": {
+                  "mode": {
+                    "oneOf": [
+                      { "$ref": "#/definitions/pmode" },
+                      { "type": "array",
+                        "items": { "$ref": "#/definitions/pmode" } }
+                    ]
+                  },
+                  "optimised_price": {
+                    "oneOf": [
+                      { "type": "null" },
+                      { "type": "number" },
+                      { "type": "array",
+                        "items": { "type": ["number", "null"] } }
+                    ]
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": true
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "mode": { "const": "funnel" } } },
+      "then": {
+        "properties": {
+          "engine": {
+            "type": "object",
+            "required": ["stages", "initial_counts", "transition",
+                         "buyer_stage", "price", "unit_cost"],
+            "properties": {
+              "stages": { "$ref": "#/definitions/strOrArray" },
+              "initial_counts": { "$ref": "#/definitions/nonNegOrArray" },
+              "transition": { "$ref": "#/definitions/unitMatrix" },
+              "buyer_stage": { "type": "integer", "minimum": 1 },
+              "price": { "type": "number", "minimum": 0 },
+              "unit_cost": { "type": "number", "minimum": 0 }
+            },
+            "additionalProperties": true
+          }
+        }
+      }
+    }
+  ],
+  "definitions": {
+    "status": { "enum": ["Proposed", "Approved", "Rejected", "Revisit"] },
+    "pmode": { "enum": ["fixed", "optimised"] },
+    "strOrArray": {
+      "oneOf": [{ "type": "string" },
+                { "type": "array", "items": { "type": "string" },
+                  "minItems": 1 }]
+    },
+    "numOrArray": {
+      "oneOf": [{ "type": "number" },
+                { "type": "array", "items": { "type": "number" } }]
+    },
+    "nonNegOrArray": {
+      "oneOf": [{ "type": "number", "minimum": 0 },
+                { "type": "array",
+                  "items": { "type": "number", "minimum": 0 } }]
+    },
+    "unitOrArray": {
+      "oneOf": [{ "type": "number", "minimum": 0, "maximum": 1 },
+                { "type": "array",
+                  "items": { "type": "number", "minimum": 0,
+                             "maximum": 1 } }]
+    },
+    "boolOrArray": {
+      "oneOf": [{ "type": "boolean" },
+                { "type": "array", "items": { "type": "boolean" } }]
+    },
+    "matrix": {
+      "oneOf": [
+        { "type": "number" },
+        { "type": "array",
+          "items": {
+            "oneOf": [{ "type": "number" },
+                      { "type": "array",
+                        "items": { "type": "number" } }]
+          } }
+      ]
+    },
+    "unitMatrix": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          { "type": "number", "minimum": 0, "maximum": 1 },
+          { "type": "array",
+            "items": { "type": "number", "minimum": 0, "maximum": 1 } }
+        ]
+      }
+    }
+  }
+}
