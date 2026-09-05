@@ -28,7 +28,7 @@ app_server <- function(input, output, session) {
                       "works fully without it."))
     }
     tagList(
-      p(class = "small", tags$b("AI prefill (propose–review–commit)")),
+      p(class = "small", tags$b("AI prefill (propose\u2013review\u2013commit)")),
       textAreaInput("brief", NULL, rows = 4,
                     placeholder = paste("Describe the company, market,",
                                         "lines and proposals in a few",
@@ -50,7 +50,7 @@ app_server <- function(input, output, session) {
     }
     res <- tryCatch(
       withProgress(prefill_from_brief(brief, spec),
-                   message = "Asking the model…"),
+                   message = "Asking the model\u2026"),
       error = function(e) {
         showNotification(conditionMessage(e), type = "error",
                          duration = 12)

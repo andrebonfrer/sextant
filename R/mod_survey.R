@@ -234,7 +234,7 @@ mod_survey_server <- function(id, spec, load_r = reactive(NULL),
         if (ai_flag) {
           div(class = "small mb-1",
               tags$span(class = "badge text-bg-warning",
-                        paste0("AI-proposed · ",
+                        paste0("AI-proposed \u00b7 ",
                                rv_src()[[q$instance_id]] %||% "assumed")),
               " ",
               tags$em(rv_rat()[[paste0(q$instance_id, "__why")]] %||% ""))
