@@ -1,0 +1,373 @@
+# sextant question spec, v1.
+#
+# Ordered sections of questions that elicit a complete Gyro parameter
+# file (schema_version 2) in plain, behavioural language. Placeholders
+# in braces are instantiated from the structural answers in `setup`
+# (collections declared below). param_path is a JSON pointer into the
+# parameter file; indices are 0-based. Transforms are implemented and
+# tested in R/fct_transforms.R.
+#
+# Note: `per_segment` is a legal repetition value in this format, but no
+# section uses it - the Gyro v0.5.0 schema has no segment objects.
+
+version: 1
+
+collections:
+  products:
+    count: n_products
+    name: product_name
+  attributes:
+    count: n_attributes
+    name: attribute_name
+  buckets:
+    count: n_buckets
+    name: bucket_name
+  stages:
+    count: n_stages
+    name: stage_name
+
+sections:
+  - id: setup
+    title: Getting oriented
+    questions:
+      - id: mode
+        section: setup
+        param_path: /mode
+        wording: Which picture of demand fits this decision better - customers choosing among competing offers, or customers moving through stages of a journey?
+        type: choice
+        options:
+          - {label: Choosing among competing offers, value: ma}
+          - {label: Moving through journey stages, value: funnel}
+        transform: identity
+        help: This sets which questions follow; everything else adapts to it.
+      - id: n_products
+        section: setup
+        param_path: null
+        wording: How many offers compete for this purchase, counting your own lines and rivals?
+        type: number
+        bounds: {min: 1, max: 8}
+        transform: to_integer
+        help: Count every line a customer could realistically pick instead.
+        depends_on: {question: mode, equals: ma}
+      - id: n_attributes
+        section: setup
+        param_path: null
+        wording: How many qualities do customers weigh when picking, besides price?
+        type: number
+        bounds: {min: 1, max: 8}
+        transform: to_integer
+        help: Two to four is typical - the things people actually compare.
+        depends_on: {question: mode, equals: ma}
+      - id: n_stages
+        section: setup
+        param_path: null
+        wording: How many stages does the customer journey have, ending at purchase?
+        type: number
+        bounds: {min: 2, max: 8}
+        transform: to_integer
+        help: For example aware, considering, buying would be three stages.
+        depends_on: {question: mode, equals: funnel}
+      - id: n_buckets
+        section: setup
+        param_path: null
+        wording: How many separate spending proposals are on the table?
+        type: number
+        bounds: {min: 1, max: 8}
+        transform: to_integer
+        help: Each proposal gets its own cost and its own promised effect.
+
+  - id: naming
+    title: Names
+    questions:
+      - id: product_name
+        section: naming
+        param_path: /engine/brands/{product_index}
+        wording: What is offer {product_ordinal} called?
+        type: text
+        transform: identity
+        help: Use the name people say in meetings.
+        repetition: per_product
+        depends_on: {question: mode, equals: ma}
+      - id: attribute_name
+        section: naming
+        param_path: /engine/attributes/{attribute_index}
+        wording: What is quality {attribute_ordinal}?
+        type: text
+        transform: identity
+        help: One or two words, like taste or delivery speed.
+        repetition: per_attribute
+        depends_on: {question: mode, equals: ma}
+      - id: stage_name
+        section: naming
+        param_path: /engine/stages/{stage_index}
+        wording: What do you call stage {stage_ordinal} of the journey?
+        type: text
+        transform: identity
+        help: In order, starting from first contact.
+        repetition: per_stage
+        depends_on: {question: mode, equals: funnel}
+      - id: bucket_name
+        section: naming
+        param_path: /investments/buckets/{bucket_index}
+        wording: What is spending proposal {bucket_ordinal} called?
+        type: text
+        transform: identity
+        help: The name it goes by in the budget discussion.
+        repetition: per_bucket
+
+  - id: market
+    title: The market and the money
+    questions:
+      - id: market_potential
+        section: market
+        param_path: /settings/market_potential
+        wording: How many customers could realistically be in this market in one planning period?
+        type: number
+        bounds: {min: 0}
+        transform: identity
+        help: Everyone who could buy from someone, not just from you.
+        benchmark: {value: 100000, note: A placeholder scale; replace with your market's size.}
+      - id: frequency
+        section: market
+        param_path: /settings/frequency
+        wording: How many times does a typical customer buy in one period?
+        type: number
+        bounds: {min: 0.01}
+        transform: identity
+        help: Once a period is 1; monthly purchases in a yearly period is 12.
+      - id: quantity
+        section: market
+        param_path: /settings/quantity
+        wording: How many units does a typical purchase include?
+        type: number
+        bounds: {min: 0.01}
+        transform: identity
+        help: Usually 1 unless customers buy in packs.
+      - id: periods
+        section: market
+        param_path: /settings/periods
+        wording: How many periods ahead should this plan be judged?
+        type: number
+        bounds: {min: 1, max: 40}
+        transform: to_integer
+        help: Longer horizons reward slow-building investments.
+        benchmark: {value: 4, note: Four periods is a common planning window.}
+      - id: discount_rate
+        section: market
+        param_path: /settings/discount_rate
+        wording: Out of 100 dollars arriving one period from now, how many dollars of value would you give up to have the money today instead?
+        type: count_of_100
+        bounds: {min: 0, max: 100}
+        transform: count_of_100_to_proportion
+        help: This is the price of waiting; bigger numbers make future gains count for less.
+        benchmark: {value: 10, note: Ten per hundred is a common corporate planning default.}
+
+  - id: lines
+    title: Your lines and their rivals
+    questions:
+      - id: line_owned
+        section: lines
+        param_path: /engine/owned/{product_index}
+        wording: Is {product} one of yours?
+        type: choice
+        options:
+          - {label: Yes, ours, value: true}
+          - {label: A rival's, value: false}
+        transform: to_logical
+        help: Investments and pricing act only on your own lines.
+        repetition: per_product
+        depends_on: {question: mode, equals: ma}
+      - id: line_parent
+        section: lines
+        param_path: /engine/parents/{product_index}
+        wording: What parent brand does {product} sell under?
+        type: text
+        transform: identity
+        help: Lines sharing a parent compete with each other more closely; if it stands alone, repeat its own name.
+        repetition: per_product
+        depends_on: {question: mode, equals: ma}
+      - id: nest_similarity
+        section: lines
+        param_path: /engine/nest_similarity
+        wording: When a customer walks away from one of your lines, out of 100 such customers, how many land on a sister line under the same parent rather than on a rival?
+        type: count_of_100
+        bounds: {min: 5, max: 100}
+        transform: sister_share_to_similarity
+        help: Higher numbers mean your lines mostly trade customers with each other.
+        benchmark: {value: 50, note: An even split is a neutral starting point.}
+        depends_on: {question: mode, equals: ma}
+
+  - id: choice_drivers
+    title: What drives choice
+    questions:
+      - id: importance
+        section: choice_drivers
+        param_path: /engine/importance/{attribute_index}
+        wording: If one offer beats another by one full rating point on {attribute}, how much does that matter - from 0 for not at all to 2 for decisively?
+        type: number
+        bounds: {min: 0, max: 2}
+        transform: identity
+        help: 1 means a one-point gap matters a normal amount.
+        benchmark: {value: 1, note: Equal weighting is the neutral default.}
+        repetition: per_attribute
+        depends_on: {question: mode, equals: ma}
+      - id: rating
+        section: choice_drivers
+        param_path: /engine/ratings/{product_index}/{attribute_index}
+        wording: On a 1 to 5 scale, how would customers rate {product} on {attribute} today?
+        type: number
+        bounds: {min: 1, max: 5}
+        transform: identity
+        help: Rate as the market sees it, not as you wish it were.
+        repetition: [per_product, per_attribute]
+        depends_on: {question: mode, equals: ma}
+      - id: price_sensitivity
+        section: choice_drivers
+        param_path: /engine/price_sensitivity
+        wording: When one offer costs one dollar more than an otherwise identical rival, how much less attractive does it become - from 0 for shoppers who ignore price to -1 for shoppers who defect over small gaps?
+        type: number
+        bounds: {min: -2, max: 0}
+        transform: identity
+        help: Use more negative numbers for markets where small price gaps move many customers.
+        benchmark: {value: -0.2, note: Mild price sensitivity; adjust to your category.}
+        depends_on: {question: mode, equals: ma}
+      - id: loyalty
+        section: choice_drivers
+        param_path: /engine/loyalty
+        wording: How strong is habit here - from 0 where last period's choice gives no head start, to 3 where customers rarely reconsider?
+        type: number
+        bounds: {min: 0, max: 5}
+        transform: identity
+        help: This is inertia toward whatever a customer bought last time.
+        benchmark: {value: 1, note: Moderate habit; subscription markets often run higher.}
+        depends_on: {question: mode, equals: ma}
+
+  - id: economics
+    title: Prices and costs
+    questions:
+      - id: line_price
+        section: economics
+        param_path: /engine/price/{product_index}
+        wording: What does one unit of {product} sell for?
+        type: currency
+        bounds: {min: 0}
+        transform: identity
+        help: The street price a customer actually pays.
+        repetition: per_product
+        depends_on: {question: mode, equals: ma}
+      - id: line_cost
+        section: economics
+        param_path: /engine/unit_costs/{product_index}
+        wording: What does one unit of {product} cost to serve?
+        type: currency
+        bounds: {min: 0}
+        transform: identity
+        help: Cost per unit sold; price minus this is the margin each sale earns.
+        repetition: per_product
+        depends_on: {question: mode, equals: ma}
+      - id: funnel_price
+        section: economics
+        param_path: /engine/price
+        wording: What does one purchase bring in?
+        type: currency
+        bounds: {min: 0}
+        transform: identity
+        help: Revenue per purchase from a customer at the buying stage.
+        depends_on: {question: mode, equals: funnel}
+      - id: funnel_cost
+        section: economics
+        param_path: /engine/unit_cost
+        wording: What does serving one purchase cost?
+        type: currency
+        bounds: {min: 0}
+        transform: identity
+        help: Price minus this is the margin each purchase earns.
+        depends_on: {question: mode, equals: funnel}
+
+  - id: journey
+    title: The journey
+    questions:
+      - id: stage_count
+        section: journey
+        param_path: /engine/initial_counts/{stage_index}
+        wording: How many customers sit at the {stage} stage right now?
+        type: number
+        bounds: {min: 0}
+        transform: identity
+        help: A headcount, best estimate is fine.
+        repetition: per_stage
+        depends_on: {question: mode, equals: funnel}
+      - id: stage_advance
+        section: journey
+        param_path: /engine/transition/{stage_index}/{stage_next_index}
+        wording: Of 100 customers at the {stage} stage this period, how many move on to the next stage by next period?
+        type: count_of_100
+        bounds: {min: 0, max: 100}
+        transform: count_of_100_to_proportion
+        help: Movement forward only; staying put is the next question.
+        repetition: per_stage
+        skip_last: true
+        depends_on: {question: mode, equals: funnel}
+      - id: stage_stay
+        section: journey
+        param_path: /engine/transition/{stage_index}/{stage_index}
+        wording: And of those 100 at the {stage} stage, how many are still at that same stage next period?
+        type: count_of_100
+        bounds: {min: 0, max: 100}
+        transform: count_of_100_to_proportion
+        help: The rest - neither advancing nor staying - drop back to the start of the journey.
+        repetition: per_stage
+        depends_on: {question: mode, equals: funnel}
+      - id: buyer_stage
+        section: journey
+        param_path: /engine/buyer_stage
+        wording: At which stage does money actually change hands?
+        type: choice
+        options: from_stages
+        transform: stage_to_index
+        help: Usually the last stage, but some journeys keep going after purchase.
+        depends_on: {question: mode, equals: funnel}
+
+  - id: proposals
+    title: The spending proposals
+    questions:
+      - id: bucket_spend
+        section: proposals
+        param_path: /investments/spend_per_period/{bucket_index}
+        wording: What would {bucket} cost per period?
+        type: currency
+        bounds: {min: 0}
+        transform: identity
+        help: The recurring cost while the proposal runs.
+        repetition: per_bucket
+      - id: bucket_target
+        section: proposals
+        param_path: /investments/targets/{bucket_index}
+        wording: Which of your lines is {bucket} meant to help?
+        type: choice
+        options: from_owned_products
+        transform: identity
+        help: The effect you judge next lands on this line.
+        repetition: per_bucket
+        depends_on: {question: mode, equals: ma}
+      - id: bucket_uplift_ma
+        section: proposals
+        param_path: /investments/uplift/{attribute_index}/{bucket_index}
+        wording: If {bucket} is funded, how many rating points higher will its target line score on {attribute} - 0 for none, up to 2 for a transformation?
+        type: number
+        bounds: {min: 0, max: 2}
+        transform: identity
+        help: This is the judgement the whole proposal rests on; half a point is already a lot.
+        repetition: [per_bucket, per_attribute]
+        depends_on: {question: mode, equals: ma}
+      - id: bucket_uplift_funnel
+        section: proposals
+        param_path: /investments/uplift/{stage_index}/{bucket_index}
+        wording: If {bucket} is funded, how many more of 100 customers at the {stage} stage will advance each period?
+        type: count_of_100
+        bounds: {min: 0, max: 100}
+        transform: count_of_100_to_proportion
+        help: Added forward movement on top of what already happens.
+        repetition: [per_bucket, per_stage]
+        skip_last: true
+        depends_on: {question: mode, equals: funnel}
