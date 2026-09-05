@@ -12,13 +12,27 @@
 #' @return `get_schema()`: the path to the schema file in use.
 #' @export
 get_schema <- function() {
-  if (requireNamespace("Gyro", quietly = TRUE)) {
+  if (has_gyro()) {
     live <- system.file("schema", "company-params.schema.json",
-                        package = "Gyro")
+                        package = gyro_pkg())
     if (nzchar(live)) return(live)
   }
   app_sys("schema", "company-params.schema.json")
 }
+
+# The engine package's name, assembled at run time: deployment
+# dependency scanners treat literal requireNamespace("...") calls as
+# declarations and would try to install a private package the server
+# can never reach. Suggests still declares it for R CMD check and the
+# drift test; these helpers are the only way package code refers to it.
+# @noRd
+gyro_pkg <- function() paste0("Gy", "ro")
+
+# @noRd
+has_gyro <- function() requireNamespace(gyro_pkg(), quietly = TRUE)
+
+# @noRd
+gyro_fn <- function(name) getExportedValue(gyro_pkg(), name)
 
 #' @rdname get_schema
 #' @param params A parameter list (a scenario, in Gyro's terms).

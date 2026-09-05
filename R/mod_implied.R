@@ -97,7 +97,7 @@ mod_implied_server <- function(id, spec, answers_r, jump) {
     })
 
     output$engine_ui <- renderUI({
-      if (!requireNamespace("Gyro", quietly = TRUE)) return(NULL)
+      if (!has_gyro()) return(NULL)
       tagList(
         tags$hr(),
         actionButton(ns("run_engine"), "Run full model (Gyro)",
@@ -110,10 +110,10 @@ mod_implied_server <- function(id, spec, answers_r, jump) {
     observeEvent(input$run_engine, {
       res <- tryCatch({
         p <- build_params(spec, answers_r())
-        scn <- Gyro::validate_scenario(p)
-        sp <- Gyro::scenario_params(scn)
-        eq <- if (sp$engine == "ma") Gyro::ma_equity(sp$params)
-              else Gyro::funnel_equity(sp$params)
+        scn <- gyro_fn("validate_scenario")(p)
+        sp <- gyro_fn("scenario_params")(scn)
+        eq <- if (sp$engine == "ma") gyro_fn("ma_equity")(sp$params)
+              else gyro_fn("funnel_equity")(sp$params)
         own <- if (sp$engine == "ma") sp$params$owned else TRUE
         list(total = sum(eq$equity[own]), per = eq$equity)
       }, error = function(e) e)

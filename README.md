@@ -60,10 +60,12 @@ rsconnect::setAccountInfo(name = "...", token = "...", secret = "...")
 rsconnect::deployApp(appName = "sextant", appTitle = "sextant")
 ```
 
-The repository is deploy-ready as is: `.renvignore` keeps the
-dependency scan away from the Gyro-touching file (a private package
-the server could never install), so the hosted app runs with the
-bundled schema and the closed-form panel - the designed degradation.
+The repository is deploy-ready as is: package code refers to Gyro
+only through a run-time-assembled name, so deployment dependency
+scanners never see a literal reference to a private package the
+server could not install. The hosted app runs with the bundled schema
+snapshot and the closed-form panel - the designed degradation - and
+gains the engine button only where Gyro is actually installed.
 
 Think before shipping an API key to a public app: on the free tier
 every app is public, and a key deployed with
