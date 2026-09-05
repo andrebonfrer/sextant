@@ -52,7 +52,7 @@ sections:
       - id: n_attributes
         section: setup
         param_path: null
-        wording: How many qualities do customers weigh when picking, besides price?
+        wording: How many qualities (attributes) do customers weigh when picking, besides price?
         type: number
         bounds: {min: 1, max: 8}
         transform: to_integer
@@ -91,7 +91,7 @@ sections:
       - id: attribute_name
         section: naming
         param_path: /engine/attributes/{attribute_index}
-        wording: What is quality {attribute_ordinal}?
+        wording: What is quality (attribute) {attribute_ordinal}?
         type: text
         transform: identity
         help: One or two words, like taste or delivery speed.

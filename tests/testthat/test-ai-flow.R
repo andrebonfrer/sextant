@@ -35,18 +35,21 @@ test_that("a canned mock response flows end to end into flagged prefilled state"
     expect_equal(ret$sources()$discount_rate, "benchmark")
     expect_equal(ret$rationales()[["loyalty__why"]], "Sticky category.")
 
-    # walk to the choice-drivers screen: the proposal is flagged there
+    # walk to the choice-drivers screen: the proposal is flagged in the
+    # question's own meta output (the input itself stays stable)
     for (k in 1:4) { invisible(output$section_ui)
                      session$setInputs(nxt = k) }
-    html <- as.character(output$section_ui$html)
-    expect_match(html, "AI-proposed")
-    expect_match(html, "Sticky category")
+    invisible(output$section_ui)
+    meta <- as.character(output$`loyalty__meta`$html)
+    expect_match(meta, "AI-proposed")
+    expect_match(meta, "Sticky category")
 
-    # a human edit ends the proposal: source flips, flag drops
+    # a human edit ends the proposal: source flips, badge drops from
+    # the meta output
     session$setInputs(loyalty = 1.5)
     expect_equal(session$getReturned()$sources()$loyalty, "stated")
-    html2 <- as.character(output$section_ui$html)
-    expect_false(grepl("AI-proposed", html2))
+    meta2 <- as.character(output$`loyalty__meta`$html)
+    expect_false(grepl("AI-proposed", meta2))
 
     # an incomplete prefill is refused (omission is correct behaviour;
     # a partial file is still not a valid file)
@@ -119,16 +122,16 @@ test_that("the per-question suggest control proposes, and Use commits with prove
                      session$setInputs(nxt = k) }
     invisible(output$section_ui)
     session$setInputs(loyalty__suggest = 1)
-    html <- as.character(output$section_ui$html)
-    expect_match(html, "Suggested")
-    expect_match(html, "0.8-2")
+    meta <- as.character(output$`loyalty__meta`$html)
+    expect_match(meta, "Suggested")
+    expect_match(meta, "0.8-2")
 
     session$setInputs(loyalty__use = 1)
     ret <- session$getReturned()
     expect_equal(ret$answers()$loyalty, 1.4)
     expect_equal(ret$sources()$loyalty, "assumed")
-    html2 <- as.character(output$section_ui$html)
-    expect_match(html2, "AI-proposed")
+    meta2 <- as.character(output$`loyalty__meta`$html)
+    expect_match(meta2, "AI-proposed")
   })
 })
 

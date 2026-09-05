@@ -65,8 +65,10 @@ app_server <- function(input, output, session) {
                               ai_r = reactive(ai_rv()),
                               brief_r = reactive(input$brief %||% ""))
 
+  # the panel breathes with the survey but not with every keystroke
+  answers_calm <- shiny::debounce(survey$answers, 600)
   mod_implied_server("implied", spec = spec,
-                     answers_r = survey$answers, jump = survey$jump)
+                     answers_r = answers_calm, jump = survey$jump)
 
   draft_params <- reactive({
     assemble_draft(spec, survey$answers(), survey$sources(),

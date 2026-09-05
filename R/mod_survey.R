@@ -43,6 +43,21 @@ mod_survey_server <- function(id, spec, load_r = reactive(NULL),
     section_i <- reactiveVal(1L)
     highlight <- reactiveVal(NULL)
     seen <- new.env(parent = emptyenv())   # observer registry
+    renders <- new.env(parent = emptyenv()); renders$n <- 0L
+
+    # Only answers that change WHICH questions exist re-render the
+    # section: mode, the collection counts, and anything a depends_on
+    # references. Ordinary answers (prices, ratings, names) update
+    # state without touching the DOM, so typing keeps its cursor.
+    rv_render <- reactiveVal(0L)
+    bump <- function() rv_render(isolate(rv_render()) + 1L)
+    structural_ids <- unique(c(
+      "mode",
+      vapply(spec$collections, `[[`, "", "count"),
+      unlist(lapply(spec$sections, function(s) {
+        lapply(s$questions, function(q) q$depends_on$question)
+      }))
+    ))
 
     observeEvent(ai_r(), {
       got <- ai_r()
@@ -60,6 +75,7 @@ mod_survey_server <- function(id, spec, load_r = reactive(NULL),
       }
       rv_ans(a); rv_src(s); rv_rat(r)
       rv_ai(union(rv_ai(), taken))
+      bump()
       showNotification(
         sprintf("AI proposed %d answer(s); review each before saving.%s",
                 length(taken),
@@ -78,12 +94,14 @@ mod_survey_server <- function(id, spec, load_r = reactive(NULL),
       src <- lapply(got$answers, function(x) "file")
       rv_src(src)
       section_i(1L)
+      bump()
       showNotification("File loaded; edit anywhere and re-save.",
                        type = "message", duration = 5)
     })
 
     visible_sections <- reactive({
-      a <- rv_ans()
+      rv_render()
+      a <- isolate(rv_ans())
       keep <- vapply(spec$sections, function(s) {
         any(vapply(s$questions, function(q) {
           dep_satisfied(q$depends_on, a)
@@ -105,10 +123,11 @@ mod_survey_server <- function(id, spec, load_r = reactive(NULL),
     })
 
     current_insts <- reactive({
+      rv_render()
       vs <- visible_sections()
       i <- min(section_i(), length(vs))
       sec_id <- vs[[i]]$id
-      inst <- instantiate_questions(spec, rv_ans())
+      inst <- instantiate_questions(spec, isolate(rv_ans()))
       Filter(function(q) identical(q$section, sec_id), inst)
     })
 
@@ -127,6 +146,7 @@ mod_survey_server <- function(id, spec, load_r = reactive(NULL),
         "benchmark"
       } else "stated"
       rv_src(s)
+      if (sub("__.*$", "", iid) %in% structural_ids) bump()
     }
 
     register <- function(iid, q) {
@@ -141,6 +161,35 @@ mod_survey_server <- function(id, spec, load_r = reactive(NULL),
       existing <- isolate(input[[iid]])
       if (!is.null(existing) && is.null(isolate(rv_ans())[[iid]])) {
         absorb(iid, q, existing)
+      }
+      meta_id <- paste0(iid, "__meta")
+      if (!exists(meta_id, envir = seen)) {
+        assign(meta_id, TRUE, envir = seen)
+        output[[meta_id]] <- renderUI({
+          ai_flag <- iid %in% rv_ai()
+          sugg <- rv_suggest()[[iid]]
+          tagList(
+            if (ai_flag) {
+              div(class = "small mb-1",
+                  tags$span(class = "badge text-bg-warning",
+                            paste0("AI-proposed \u00b7 ",
+                                   rv_src()[[iid]] %||% "assumed")),
+                  " ",
+                  tags$em(rv_rat()[[paste0(iid, "__why")]] %||% ""))
+            },
+            if (!is.null(sugg)) {
+              div(class = "border rounded p-2 mb-2 small",
+                  tags$b("Suggested: "), format(sugg$answer),
+                  if (nzchar(sugg$typical_range %||% "")) {
+                    span(class = "text-muted",
+                         paste0("  (typical: ", sugg$typical_range, ")"))
+                  },
+                  div(class = "text-muted", sugg$rationale),
+                  actionButton(ns(paste0(iid, "__use")), "Use",
+                               class = "btn-sm btn-outline-primary mt-1"))
+            }
+          )
+        })
       }
       why_id <- paste0(iid, "__why")
       if (!exists(why_id, envir = seen)) {
@@ -212,7 +261,7 @@ mod_survey_server <- function(id, spec, load_r = reactive(NULL),
 
     widget_for <- function(q) {
       iid <- q$instance_id
-      cur <- rv_ans()[[iid]] %||% q$benchmark$value
+      cur <- isolate(rv_ans())[[iid]] %||% q$benchmark$value
       base <- switch(
         q$type,
         text = textInput(ns(iid), q$wording,
@@ -228,28 +277,8 @@ mod_survey_server <- function(id, spec, load_r = reactive(NULL),
                      min = q$bounds$min %||% NA,
                      max = q$bounds$max %||% NA)
       )
-      ai_flag <- q$instance_id %in% rv_ai()
-      sugg <- rv_suggest()[[q$instance_id]]
       notes <- tagList(
-        if (ai_flag) {
-          div(class = "small mb-1",
-              tags$span(class = "badge text-bg-warning",
-                        paste0("AI-proposed \u00b7 ",
-                               rv_src()[[q$instance_id]] %||% "assumed")),
-              " ",
-              tags$em(rv_rat()[[paste0(q$instance_id, "__why")]] %||% ""))
-        },
-        if (!is.null(sugg)) {
-          div(class = "border rounded p-2 mb-2 small",
-              tags$b("Suggested: "), format(sugg$answer),
-              if (nzchar(sugg$typical_range %||% "")) {
-                span(class = "text-muted",
-                     paste0("  (typical: ", sugg$typical_range, ")"))
-              },
-              div(class = "text-muted", sugg$rationale),
-              actionButton(ns(paste0(q$instance_id, "__use")), "Use",
-                           class = "btn-sm btn-outline-primary mt-1"))
-        },
+        uiOutput(ns(paste0(q$instance_id, "__meta"))),
         if (ai_available()) {
           div(class = "small",
               actionLink(ns(paste0(q$instance_id, "__suggest")),
@@ -261,7 +290,7 @@ mod_survey_server <- function(id, spec, load_r = reactive(NULL),
                     q$benchmark$note))
         },
         p(class = "text-muted small mb-1", q$help),
-        if (!is.null(rv_direct()[[iid]])) {
+        if (!is.null(isolate(rv_direct())[[iid]])) {
           p(class = "small",
             sprintf("Currently in the file: %s (not re-askable directly;
 answering here replaces it).",
@@ -271,19 +300,18 @@ answering here replaces it).",
         tags$details(
           tags$summary(class = "text-muted small", "why? (optional)"),
           textInput(ns(paste0(iid, "__why")), NULL,
-                    value = rv_rat()[[paste0(iid, "__why")]] %||% "",
+                    value = isolate(rv_rat())[[paste0(iid, "__why")]] %||% "",
                     placeholder = "On whose authority, from what evidence"))
       )
       style <- if (identical(highlight(), q$id) ||
                      identical(highlight(), iid)) {
         "border-left: 4px solid #b08d3e; padding-left: 10px;"
-      } else if (ai_flag) {
-        "border-left: 4px dashed #b08d3e; padding-left: 10px;"
       } else ""
       div(style = style, class = "mb-3", base, notes)
     }
 
     output$section_ui <- renderUI({
+      renders$n <- renders$n + 1L
       insts <- current_insts()
       for (q in insts) register(q$instance_id, q)
       if (length(insts) == 0) {
@@ -296,10 +324,12 @@ answering here replaces it).",
     observeEvent(input$nxt, {
       section_i(min(section_i() + 1L, length(visible_sections())))
       highlight(NULL)
+      bump()
     })
     observeEvent(input$back, {
       section_i(max(section_i() - 1L, 1L))
       highlight(NULL)
+      bump()
     })
 
     jump <- function(qid) {
@@ -311,6 +341,7 @@ answering here replaces it).",
         }, TRUE))) {
           section_i(i)
           highlight(base)
+          bump()
           return(invisible())
         }
       }
@@ -322,7 +353,8 @@ answering here replaces it).",
       rationales = reactive(rv_rat()),
       direct = reactive(rv_direct()),
       prior_annotations = reactive(rv_prior_ann()),
-      jump = jump
+      jump = jump,
+      .render_count = function() renders$n
     )
   })
 }

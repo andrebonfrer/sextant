@@ -118,3 +118,54 @@ test_that("the panel's jump lands the survey on the driving question", {
     expect_match(html, "What drives choice")
   })
 })
+
+
+test_that("typing an ordinary answer never rebuilds the section (cursor stays put)", {
+  spec <- question_spec()
+  shiny::testServer(mod_survey_server, args = list(spec = spec), {
+    invisible(output$section_ui)
+    session$setInputs(mode = "ma")
+    session$flushReact()
+    invisible(output$section_ui)          # structural change re-rendered
+    n0 <- session$getReturned()$.render_count()
+
+    # ordinary answers: absorbed, but the DOM is left alone
+    session$setInputs(n_products = 3)     # structural: allowed to rebuild
+    session$flushReact()
+    invisible(output$section_ui)
+    n1 <- session$getReturned()$.render_count()
+    expect_gt(n1, n0)
+
+    for (k in 1:2) { invisible(output$section_ui)
+                     session$setInputs(nxt = k) }
+    invisible(output$section_ui)
+    n2 <- session$getReturned()$.render_count()
+    session$setInputs(market_potential = 5)
+    session$setInputs(market_potential = 50)
+    session$setInputs(market_potential = 500)   # keystrokes
+    session$flushReact()
+    invisible(output$section_ui)
+    expect_equal(session$getReturned()$.render_count(), n2)
+    expect_equal(session$getReturned()$answers()$market_potential, 500)
+  })
+})
+
+test_that("typing a product name is absorbed without rebuilding the naming screen", {
+  spec <- question_spec()
+  shiny::testServer(mod_survey_server, args = list(spec = spec), {
+    invisible(output$section_ui)
+    session$setInputs(mode = "ma", n_products = 2, n_attributes = 1,
+                      n_buckets = 1)
+    session$flushReact()
+    session$setInputs(nxt = 1)
+    invisible(output$section_ui)
+    n0 <- session$getReturned()$.render_count()
+    session$setInputs(product_name__0 = "A")
+    session$setInputs(product_name__0 = "Ac")
+    session$setInputs(product_name__0 = "Acme")
+    session$flushReact()
+    invisible(output$section_ui)
+    expect_equal(session$getReturned()$.render_count(), n0)
+    expect_equal(session$getReturned()$answers()$product_name__0, "Acme")
+  })
+})
