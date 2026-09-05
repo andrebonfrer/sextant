@@ -23,6 +23,7 @@ The interview and its engine:
 | Answers to parameters | `apply_transform()`, `build_params()` — JSON-pointer assembly with the funnel residual rule (rows sum to one by construction) |
 | Response calibration | `fit_adbudg()` — deterministic ADBUDG fit from four anchors; wired as a linear read at planned spend, full fit preserved in the file's annotations |
 | Survey app | `run_app()` — the interview with live implied quantities (closed form), anchor curve plotting, load-and-edit with provenance that survives the round trip |
+| AI layer | `prefill_from_brief()`, `ai_suggest_question()` — propose-review-commit: the model answers the questionnaire under the same bounds and transforms, proposals arrive flagged with rationales, and a human edit or save is always the last word. Requires `ANTHROPIC_API_KEY`; fully optional |
 
 ## The contract
 

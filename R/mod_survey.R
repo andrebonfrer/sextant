@@ -26,7 +26,9 @@ mod_survey_ui <- function(id) {
 #'   seed from (or NULL).
 #' @return list(answers, sources, rationales, direct, jump).
 #' @noRd
-mod_survey_server <- function(id, spec, load_r = reactive(NULL)) {
+mod_survey_server <- function(id, spec, load_r = reactive(NULL),
+                              ai_r = reactive(NULL),
+                              brief_r = reactive("")) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
 
@@ -35,9 +37,37 @@ mod_survey_server <- function(id, spec, load_r = reactive(NULL)) {
     rv_rat <- reactiveVal(list())
     rv_direct <- reactiveVal(list())
     rv_prior_ann <- reactiveVal(list())
+    rv_ai <- reactiveVal(character())      # instance ids proposed by AI
+    rv_suggest <- reactiveVal(list())      # pending per-question suggestions
+    skip_once <- new.env(parent = emptyenv())
     section_i <- reactiveVal(1L)
     highlight <- reactiveVal(NULL)
     seen <- new.env(parent = emptyenv())   # observer registry
+
+    observeEvent(ai_r(), {
+      got <- ai_r()
+      req(is.list(got), length(got$answers) > 0)
+      a <- rv_ans(); s <- rv_src(); r <- rv_rat()
+      taken <- character()
+      for (id in names(got$answers)) {
+        if (!is.null(a[[id]])) next     # never clobber a human answer
+        a[[id]] <- got$answers[[id]]
+        s[[id]] <- got$sources[[id]] %||% "assumed"
+        taken <- c(taken, id)
+      }
+      for (k in names(got$rationales %||% list())) {
+        if (is.null(r[[k]])) r[[k]] <- got$rationales[[k]]
+      }
+      rv_ans(a); rv_src(s); rv_rat(r)
+      rv_ai(union(rv_ai(), taken))
+      showNotification(
+        sprintf("AI proposed %d answer(s); review each before saving.%s",
+                length(taken),
+                if (length(got$notes)) paste0(" Notes: ",
+                  paste(utils::head(got$notes, 3), collapse = " | "))
+                else ""),
+        type = "message", duration = 10)
+    })
 
     observeEvent(load_r(), {
       got <- load_r()
@@ -83,7 +113,12 @@ mod_survey_server <- function(id, spec, load_r = reactive(NULL)) {
     })
 
     absorb <- function(iid, q, v) {
+      if (exists(iid, envir = skip_once)) {
+        rm(list = iid, envir = skip_once)
+        return(invisible())
+      }
       a <- rv_ans(); a[[iid]] <- v; rv_ans(a)
+      rv_ai(setdiff(rv_ai(), iid))       # a human edit ends the proposal
       bm <- q$benchmark$value
       s <- rv_src()
       s[[iid]] <- if (!is.null(bm) &&
@@ -112,6 +147,55 @@ mod_survey_server <- function(id, spec, load_r = reactive(NULL)) {
         assign(why_id, TRUE, envir = seen)
         observeEvent(input[[why_id]], {
           r <- rv_rat(); r[[why_id]] <- input[[why_id]]; rv_rat(r)
+        }, ignoreInit = TRUE)
+      }
+      sug_id <- paste0(iid, "__suggest")
+      if (!exists(sug_id, envir = seen)) {
+        assign(sug_id, TRUE, envir = seen)
+        observeEvent(input[[sug_id]], {
+          brief <- trimws(brief_r() %||% "")
+          if (!nzchar(brief)) {
+            showNotification("Add a brief in the AI panel first.",
+                             type = "warning", duration = 6)
+            return()
+          }
+          res <- tryCatch(ai_suggest_question(brief, q, spec),
+                          error = function(e) {
+                            showNotification(conditionMessage(e),
+                                             type = "error",
+                                             duration = 10)
+                            NULL
+                          })
+          if (is.null(res)) {
+            showNotification("No grounded suggestion for this one.",
+                             type = "message", duration = 6)
+            return()
+          }
+          sg <- rv_suggest(); sg[[iid]] <- res; rv_suggest(sg)
+        }, ignoreInit = TRUE)
+      }
+      use_id <- paste0(iid, "__use")
+      if (!exists(use_id, envir = seen)) {
+        assign(use_id, TRUE, envir = seen)
+        observeEvent(input[[use_id]], {
+          res <- rv_suggest()[[iid]]
+          req(!is.null(res))
+          a <- rv_ans(); a[[iid]] <- res$answer; rv_ans(a)
+          s <- rv_src(); s[[iid]] <- res$source; rv_src(s)
+          if (nzchar(res$rationale)) {
+            r <- rv_rat(); r[[paste0(iid, "__why")]] <- res$rationale
+            rv_rat(r)
+          }
+          rv_ai(union(rv_ai(), iid))
+          assign(iid, TRUE, envir = skip_once)   # programmatic update
+          if (identical(q$type, "choice")) {
+            updateSelectInput(session, iid, selected = res$answer)
+          } else if (identical(q$type, "text")) {
+            updateTextInput(session, iid, value = res$answer)
+          } else {
+            updateNumericInput(session, iid, value = res$answer)
+          }
+          sg <- rv_suggest(); sg[[iid]] <- NULL; rv_suggest(sg)
         }, ignoreInit = TRUE)
       }
       if (identical(q$type, "anchor_set")) {
@@ -144,7 +228,33 @@ mod_survey_server <- function(id, spec, load_r = reactive(NULL)) {
                      min = q$bounds$min %||% NA,
                      max = q$bounds$max %||% NA)
       )
+      ai_flag <- q$instance_id %in% rv_ai()
+      sugg <- rv_suggest()[[q$instance_id]]
       notes <- tagList(
+        if (ai_flag) {
+          div(class = "small mb-1",
+              tags$span(class = "badge text-bg-warning",
+                        paste0("AI-proposed · ",
+                               rv_src()[[q$instance_id]] %||% "assumed")),
+              " ",
+              tags$em(rv_rat()[[paste0(q$instance_id, "__why")]] %||% ""))
+        },
+        if (!is.null(sugg)) {
+          div(class = "border rounded p-2 mb-2 small",
+              tags$b("Suggested: "), format(sugg$answer),
+              if (nzchar(sugg$typical_range %||% "")) {
+                span(class = "text-muted",
+                     paste0("  (typical: ", sugg$typical_range, ")"))
+              },
+              div(class = "text-muted", sugg$rationale),
+              actionButton(ns(paste0(q$instance_id, "__use")), "Use",
+                           class = "btn-sm btn-outline-primary mt-1"))
+        },
+        if (ai_available()) {
+          div(class = "small",
+              actionLink(ns(paste0(q$instance_id, "__suggest")),
+                         "suggest"))
+        },
         if (!is.null(q$benchmark)) {
           p(class = "text-muted small mb-1",
             sprintf("Default shown: %s \u2014 %s", q$benchmark$value,
@@ -167,6 +277,8 @@ answering here replaces it).",
       style <- if (identical(highlight(), q$id) ||
                      identical(highlight(), iid)) {
         "border-left: 4px solid #b08d3e; padding-left: 10px;"
+      } else if (ai_flag) {
+        "border-left: 4px dashed #b08d3e; padding-left: 10px;"
       } else ""
       div(style = style, class = "mb-3", base, notes)
     }

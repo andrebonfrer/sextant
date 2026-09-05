@@ -299,12 +299,18 @@ ai_suggest_question <- function(brief, question, spec = question_spec()) {
   parsed <- extract_json(raw)
   d <- parsed$data
   if (length(d) == 0 || is.null(d$answer)) return(NULL)
-  wrapped <- stats::setNames(list(d), question$instance_id)
-  v <- validate_prefill(spec, wrapped, notes = parsed$notes)
-  if (is.null(v$answers[[question$instance_id]])) return(NULL)
-  list(answer = v$answers[[question$instance_id]],
-       source = v$sources[[question$instance_id]],
+  # bounds-validate directly against the question we already hold -
+  # unlike prefill, no instantiation context is needed or available
+  tq <- question
+  if (identical(question$type, "anchor_set")) tq$type <- "count_of_100"
+  ok <- tryCatch({ apply_transform(d$answer, tq, NULL); TRUE },
+                 error = function(e) FALSE)
+  if (!ok) return(NULL)                  # out of bounds: no suggestion
+  s <- d$source %||% "assumed"
+  if (!s %in% c("benchmark", "assumed")) s <- "assumed"
+  list(answer = d$answer,
+       source = s,
        rationale = d$rationale %||% "",
        typical_range = d$typical_range %||% "",
-       notes = v$notes)
+       notes = parsed$notes)
 }

@@ -22,6 +22,8 @@ app_ui <- function(request) {
               fileInput("load_file", "Open a parameter file",
                         accept = ".json", buttonLabel = "Browse\u2026"),
               downloadButton("save_file", "Save parameter file"),
+              tags$hr(),
+              uiOutput("ai_panel"),
               helpText("Saving validates against the Gyro schema and",
                        "refuses an invalid file. Downloads never",
                        "overwrite anything without your say-so.")

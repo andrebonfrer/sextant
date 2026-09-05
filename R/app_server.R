@@ -19,8 +19,51 @@ app_server <- function(input, output, session) {
     load_rv(got)
   })
 
+  ai_rv <- reactiveVal(NULL)
+
+  output$ai_panel <- renderUI({
+    if (!ai_available()) {
+      return(helpText("AI prefill is off: set the ANTHROPIC_API_KEY",
+                      "environment variable to enable it. The survey",
+                      "works fully without it."))
+    }
+    tagList(
+      p(class = "small", tags$b("AI prefill (propose–review–commit)")),
+      textAreaInput("brief", NULL, rows = 4,
+                    placeholder = paste("Describe the company, market,",
+                                        "lines and proposals in a few",
+                                        "sentences.")),
+      actionButton("prefill", "Prefill from brief",
+                   class = "btn-secondary btn-sm"),
+      helpText("Proposals load flagged into the survey; nothing is",
+               "saved until you review and save. Unanswered means the",
+               "model could not ground it.")
+    )
+  })
+
+  observeEvent(input$prefill, {
+    brief <- trimws(input$brief %||% "")
+    if (!nzchar(brief)) {
+      showNotification("Write a brief first.", type = "warning",
+                       duration = 6)
+      return()
+    }
+    res <- tryCatch(
+      withProgress(prefill_from_brief(brief, spec),
+                   message = "Asking the model…"),
+      error = function(e) {
+        showNotification(conditionMessage(e), type = "error",
+                         duration = 12)
+        NULL
+      })
+    req(res)
+    ai_rv(res)
+  })
+
   survey <- mod_survey_server("survey", spec = spec,
-                              load_r = reactive(load_rv()))
+                              load_r = reactive(load_rv()),
+                              ai_r = reactive(ai_rv()),
+                              brief_r = reactive(input$brief %||% ""))
 
   mod_implied_server("implied", spec = spec,
                      answers_r = survey$answers, jump = survey$jump)

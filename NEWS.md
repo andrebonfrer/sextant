@@ -1,5 +1,19 @@
 # sextant (development version)
 
+* AI layer (Prompt 3), propose-review-commit only: prefill_from_brief()
+  answers the questionnaire - never the schema - from a free-text
+  brief, with omission preferred over invention; answers pass the same
+  bounds and transforms as a human's, out-of-bounds proposals are
+  dropped with a note (never clamped), and anchor questions are
+  answered as anchors with the curve fitted by the same deterministic
+  R code. Proposals load into the survey visibly flagged with their
+  rationales; any human edit flips the answer to stated; nothing is
+  written without review and an explicit save. A per-question suggest
+  control proposes one answer with rationale and typical range,
+  inserted only on an explicit Use click. Key from ANTHROPIC_API_KEY
+  only; without it the AI features hide behind a short notice and the
+  survey works fully. All tests mock the API at its single seam.
+
 * Survey UI (Prompt 2): section-by-section interview rendered from the
   question spec, with progress, repetition, dependencies, and
   benchmark defaults shown with their source notes; answers equal to

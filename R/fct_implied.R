@@ -61,6 +61,10 @@ implied_summary <- function(spec, answers) {
   qty <- suppressWarnings(as.numeric(answers$quantity))
   mp <- suppressWarnings(as.numeric(answers$market_potential))
   rows <- list()
+  if (!identical(answers$mode, "ma") &&
+      !identical(answers$mode, "funnel")) {
+    return(rows)
+  }
   add <- function(label, value, detail, drivers) {
     rows[[length(rows) + 1L]] <<- list(label = label, value = value,
                                        detail = detail,
@@ -114,6 +118,7 @@ implied_summary <- function(spec, answers) {
     }
   } else {
     S <- length(coll$stages)
+    if (S == 0) return(rows)
     buyer <- answers$buyer_stage
     bi <- if (!is.null(buyer)) match(buyer, coll$stages) else S
     stay <- suppressWarnings(as.numeric(
