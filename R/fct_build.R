@@ -165,6 +165,9 @@ apply_anchor_set <- function(params, q, answers, ctx) {
 #' @param spec,answers As in [build_params()].
 #' @param sources Named list, instance id -> "stated"/"benchmark"/"file".
 #' @param rationales Named list, `<instance id>__why` -> free text.
+#' @param prior_annotations The annotations block of a loaded file, so
+#'   its provenance survives the edit cycle; session-tracked sources
+#'   overlay it only on the leaves the user touched.
 #' @return An annotated parameter list ready for [write_params()].
 #' @export
 assemble_draft <- function(spec, answers, sources = list(),

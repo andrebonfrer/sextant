@@ -18,6 +18,10 @@ assemble_draft(
 \item{sources}{Named list, instance id -> "stated"/"benchmark"/"file".}
 
 \item{rationales}{Named list, `<instance id>__why` -> free text.}
+
+\item{prior_annotations}{The annotations block of a loaded file, so
+its provenance survives the edit cycle; session-tracked sources
+overlay it only on the leaves the user touched.}
 }
 \value{
 An annotated parameter list ready for [write_params()].

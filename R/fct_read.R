@@ -49,6 +49,7 @@ sextant_inverses <- list(
 )
 
 #' @rdname read_params
+#' @param name A transform name, as declared in the question spec.
 #' @export
 invertible_transform <- function(name) {
   name %in% names(sextant_inverses)

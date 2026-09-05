@@ -15,6 +15,8 @@ file_to_answers(spec, params)
 \arguments{
 \item{path}{Path of a parameter file.}
 
+\item{name}{A transform name, as declared in the question spec.}
+
 \item{spec}{A spec from [question_spec()].}
 
 \item{params}{A parameter list from [read_params()].}
