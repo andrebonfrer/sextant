@@ -6,3 +6,4 @@
 ^app\.R$
 ^\.renvignore$
 ^\.github$
+^inst/app/www/\.gitkeep$

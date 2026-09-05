@@ -35,6 +35,10 @@ build_params <- function(spec, answers) {
   ctx <- list(collections = coll)
   for (q in inst) {
     if (is.null(q$param_path)) next
+    if (identical(q$type, "anchor_set")) {
+      params <- apply_anchor_set(params, q, answers, ctx)
+      next
+    }
     a <- answers[[q$instance_id]]
     if (is.null(a)) next
     params <- pointer_set(params, q$param_path,
@@ -113,4 +117,38 @@ fill_matrix <- function(m, nrow, ncol, fill = 0) {
     m[[i]] <- lapply(row, function(v) v %||% fill)
   }
   m
+}
+
+# Linear wiring of an anchor_set question, pending a response-curve
+# family in the Gyro schema: the four anchor answers (each passed
+# through the question's transform) are fitted to ADBUDG - which also
+# enforces that they rise sensibly - and the value written to the
+# question's param_path is the linear read at the planned spend,
+# response(current) - response(zero). The full fitted curve is preserved
+# in the file's annotations block so nothing elicited is lost; when a
+# schema with curve parameters exists, the same anchors re-fit
+# losslessly.
+# @noRd
+apply_anchor_set <- function(params, q, answers, ctx) {
+  keys <- paste0(q$instance_id, "__", c("zero", "current", "increased",
+                                        "saturation"))
+  raw <- lapply(keys, function(k) answers[[k]])
+  if (any(vapply(raw, is.null, TRUE))) return(params)
+  tq <- q; tq$type <- "count_of_100"   # bounds-check each anchor answer
+  v <- vapply(raw, function(a) as.numeric(apply_transform(a, tq, ctx)), 0)
+  fit <- fit_adbudg(zero = v[1], current = v[2], increased = v[3],
+                    saturation = v[4], x_current = 1, x_increased = 2)
+  params <- pointer_set(params, q$param_path, v[2] - v[1])
+  ann <- params$annotations %||% list()
+  ann[[sub("^/", "", q$param_path)]] <- list(
+    source = "stated",
+    rationale = sprintf(
+      paste("ADBUDG anchors (zero/current/2x/saturation =",
+            "%.4g/%.4g/%.4g/%.4g); fitted a=%.4g b=%.4g c=%.4g d=%.4g;",
+            "wrote the linear read at planned spend (current - zero)",
+            "pending a response-curve family in the Gyro schema."),
+      v[1], v[2], v[3], v[4], fit$a, fit$b, fit$c, fit$d)
+  )
+  params$annotations <- ann
+  params
 }
