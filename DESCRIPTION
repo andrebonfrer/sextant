@@ -15,6 +15,7 @@ Imports:
     bslib (>= 0.5.0),
     config,
     golem,
+    httr2,
     jsonlite,
     jsonvalidate,
     pkgload,
