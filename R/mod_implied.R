@@ -64,16 +64,12 @@ mod_implied_server <- function(id, spec, answers_r, jump) {
 
     margin_r <- reactive({
       a <- answers_r()
-      f <- suppressWarnings(as.numeric(a$frequency %||% 1))
-      q <- suppressWarnings(as.numeric(a$quantity %||% 1))
+      f <- num1(a$frequency %||% 1)
+      q <- num1(a$quantity %||% 1)
       if (identical(a$mode, "funnel")) {
-        (suppressWarnings(as.numeric(a$funnel_price)) -
-           suppressWarnings(as.numeric(a$funnel_cost))) * f * q
+        (num1(a$funnel_price) - num1(a$funnel_cost)) * f * q
       } else {
-        i <- 0
-        p <- suppressWarnings(as.numeric(a[[paste0("line_price__", i)]]))
-        cc <- suppressWarnings(as.numeric(a[[paste0("line_cost__", i)]]))
-        (p - cc) * f * q
+        (num1(a[["line_price__0"]]) - num1(a[["line_cost__0"]])) * f * q
       }
     })
 
@@ -81,8 +77,8 @@ mod_implied_server <- function(id, spec, answers_r, jump) {
       a <- answers_r()
       m <- margin_r()
       d <- suppressWarnings(as.numeric(a$discount_rate)) / 100
-      if (!is.finite(m) || m <= 0 || !is.finite(d) ||
-          is.na(input$cac %||% NA)) {
+      if (is.na(input$cac %||% NA) || !is.finite(m) || m <= 0 ||
+          !is.finite(d)) {
         return(helpText("Enter a cost to see how many periods one",
                         "customer's margin takes to repay it."))
       }

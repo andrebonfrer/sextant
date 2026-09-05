@@ -1,6 +1,6 @@
 Package: sextant
 Title: Parameter Provenance and Elicitation for Gyro Scenarios
-Version: 0.0.0.9001
+Version: 0.0.0.9002
 Authors@R: 
     person("Andre", "Bonfrer", email = "abonfrer@me.com", role = c("aut", "cre"))
 Description: A companion to the Gyro customer-equity budgeting tool. Gyro

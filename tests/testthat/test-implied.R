@@ -69,5 +69,22 @@ test_that("the implied panel renders live at the exact partial state a user type
     session$setInputs(`survey-n_products` = 2)
     session$flushReact()
     expect_no_error(invisible(output$`implied-rows`))
+    expect_no_error(invisible(output$`implied-payback`))
+    expect_no_error(invisible(output$`implied-engine_ui`))
+  })
+})
+
+test_that("spinner-style entry (stepping, clearing to NA) never crashes the panel", {
+  shiny::testServer(app_server, {
+    invisible(output$`survey-section_ui`)
+    session$setInputs(`survey-mode` = "ma")
+    session$flushReact()
+    invisible(output$`survey-section_ui`)
+    for (v in list(1, 2, NA, 3)) {      # click, click, clear, click
+      session$setInputs(`survey-n_products` = v)
+      session$flushReact()
+      expect_no_error(invisible(output$`implied-rows`))
+      expect_no_error(invisible(output$`implied-payback`))
+    }
   })
 })
