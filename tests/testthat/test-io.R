@@ -45,7 +45,7 @@ test_that("non-scenarios are refused with reasons", {
 })
 
 test_that("the bundled demo scenario is valid and unannotated", {
-  demo <- app_sys("demo", "coffee-portfolio.json")
+  demo <- app_sys("demo-scenarios", "coffee-portfolio.json")
   scn <- read_scenario(demo)
   expect_null(scn$annotations)
   expect_equal(scn$mode, "ma")

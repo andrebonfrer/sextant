@@ -12,7 +12,7 @@ test_that("the provenance report renders coverage, tables and red flags", {
 })
 
 test_that("a fully naked scenario reports its missing high-stakes list", {
-  demo <- read_scenario(app_sys("demo", "coffee-portfolio.json"))
+  demo <- read_scenario(app_sys("demo-scenarios", "coffee-portfolio.json"))
   rpt <- provenance_report(demo)
   expect_match(rpt, "no provenance at all")
   expect_match(rpt, "0 of|0%|\\(0%\\)")

@@ -44,7 +44,7 @@ mod_Load_server <- function(id, set_scenario) {
       do_load(input$scenario_file$datapath, "Scenario")
     })
     observeEvent(input$load_demo, {
-      do_load(app_sys("demo", "coffee-portfolio.json"), "Demo")
+      do_load(app_sys("demo-scenarios", "coffee-portfolio.json"), "Demo")
     })
 
     output$loaded_note <- renderUI({

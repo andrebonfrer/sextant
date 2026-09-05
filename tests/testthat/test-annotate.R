@@ -1,5 +1,5 @@
 scn <- read_scenario(test_path("fixture-coffee-annotated.json"))
-demo <- read_scenario(app_sys("demo", "coffee-portfolio.json"))
+demo <- read_scenario(app_sys("demo-scenarios", "coffee-portfolio.json"))
 
 test_that("annotation_targets lists judgements with high-stakes flags", {
   t <- annotation_targets(demo)
