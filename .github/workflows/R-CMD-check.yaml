@@ -24,7 +24,12 @@ jobs:
           use-public-rspm: true
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
-          extra-packages: any::rcmdcheck
+          # Gyro (Suggests) lives in a private repository: tell pak to
+          # ignore it at install time; the drift test skips without it
+          # and _R_CHECK_FORCE_SUGGESTS_ keeps the check honest.
+          extra-packages: |
+            any::rcmdcheck
+            Gyro=?ignore
           needs: check
       - uses: r-lib/actions/check-r-package@v2
         with:
