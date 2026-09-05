@@ -53,13 +53,13 @@ mod_anchor_server <- function(id, on_change) {
       f <- fit_r()
       req(!is.null(f), !inherits(f, "error"))
       x <- seq(0, 4, length.out = 121)
-      plot(x, f$predict(x), type = "l", lwd = 2, col = "#1c3a52",
+      graphics::plot(x, f$predict(x), type = "l", lwd = 2, col = "#1c3a52",
            xlab = "Spend (planned = 1)", ylab = "Response",
            main = "What your anchors imply")
       v <- anchors_r()
-      points(c(0, 1, 2), c(v$zero, v$current, v$increased),
+      graphics::points(c(0, 1, 2), c(v$zero, v$current, v$increased),
              pch = 19, col = "#b08d3e", cex = 1.4)
-      abline(h = f$a, lty = 3)
+      graphics::abline(h = f$a, lty = 3)
     })
 
     output$fit_note <- renderUI({
