@@ -50,6 +50,8 @@ sextant::run_app()
 Load the bundled demo (Gyro's coffee-portfolio scenario, annotations
 stripped) and annotate it; or bring your own scenario file.
 
+Parameter files compatible with gyro >= 0.5.0 (schema_version 2).
+
 ## The contract
 
 `inst/schema/company-params.schema.json` is a verbatim copy of the

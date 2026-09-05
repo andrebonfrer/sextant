@@ -1,6 +1,7 @@
-# sextant 0.1.0
+# sextant (development version)
 
-First release: the provenance companion to Gyro.
+Initial development. Provenance companion to Gyro (from the initial
+build):
 
 * Scenario IO with Gyro serialisation parity (`read_scenario()`,
   `write_scenario()`); reads are validated against the bundled copy of

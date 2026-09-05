@@ -12,9 +12,8 @@ write_scenario(scenario, path)
 \arguments{
 \item{path}{File path of a Gyro scenario JSON.}
 
-\item{schema_check}{Validate against the bundled JSON Schema on read
-(default `TRUE`; silently skipped unless `jsonvalidate` is
-installed).}
+\item{schema_check}{Validate against [get_schema()] on read
+(default `TRUE`).}
 
 \item{scenario}{A scenario list.}
 }
@@ -28,8 +27,8 @@ a scenario JSON the way Gyro does (vectors and matrices simplified);
 [write_scenario()] serialises with settings identical to Gyro's writer,
 so a file that round-trips through sextant differs only where you
 changed it. When the `jsonvalidate` package is installed, reads are
-checked against the bundled copy of Gyro's schema first
-(`schema_check = TRUE`); otherwise a light structural check runs.
+checked against [get_schema()] first
+(`schema_check = TRUE`).
 }
 \details{
 sextant never computes on these files - it reads them, annotates them,
