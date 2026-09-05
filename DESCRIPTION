@@ -1,6 +1,6 @@
 Package: sextant
 Title: Parameter Provenance and Elicitation for Gyro Scenarios
-Version: 0.0.0.9000
+Version: 0.0.0.9001
 Authors@R: 
     person("Andre", "Bonfrer", email = "abonfrer@me.com", role = c("aut", "cre"))
 Description: A companion to the Gyro customer-equity budgeting tool. Gyro
@@ -11,6 +11,8 @@ Description: A companion to the Gyro customer-equity budgeting tool. Gyro
     judgements, and produces a provenance report for budget meetings. It
     performs no equity computation.
 License: MIT + file LICENSE
+Depends:
+    R (>= 4.1.0)
 Imports:
     bslib (>= 0.5.0),
     config,
