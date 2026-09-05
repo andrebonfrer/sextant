@@ -47,7 +47,7 @@ sections:
         type: number
         bounds: {min: 1, max: 8}
         transform: to_integer
-        help: Count every line a customer could realistically pick instead.
+        help: The total on the shelf, yours included - your brand plus two rivals is 3.
         depends_on: {question: mode, equals: ma}
       - id: n_attributes
         section: setup

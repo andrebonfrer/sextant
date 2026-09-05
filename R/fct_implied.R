@@ -41,6 +41,16 @@ payback_periods <- function(margin, discount, cac) {
   as.integer(ceiling(t - 1e-9))
 }
 
+# Coerce one answer to exactly one number: absent, empty, multi-valued
+# or non-numeric answers all become NA, so partial survey states flow
+# through the arithmetic guards instead of detonating in `if`/`||`.
+# @noRd
+num1 <- function(x) {
+  v <- suppressWarnings(as.numeric(x %||% NA))
+  if (length(v) != 1) return(NA_real_)
+  v
+}
+
 # Softmax with max-subtraction.
 # @noRd
 softmax <- function(u) {
@@ -56,10 +66,10 @@ softmax <- function(u) {
 #' @export
 implied_summary <- function(spec, answers) {
   coll <- spec_collections(spec, answers)
-  d <- suppressWarnings(as.numeric(answers$discount_rate)) / 100
-  freq <- suppressWarnings(as.numeric(answers$frequency))
-  qty <- suppressWarnings(as.numeric(answers$quantity))
-  mp <- suppressWarnings(as.numeric(answers$market_potential))
+  d <- num1(answers$discount_rate) / 100
+  freq <- num1(answers$frequency)
+  qty <- num1(answers$quantity)
+  mp <- num1(answers$market_potential)
   rows <- list()
   if (!identical(answers$mode, "ma") &&
       !identical(answers$mode, "funnel")) {
@@ -75,19 +85,16 @@ implied_summary <- function(spec, answers) {
   if (identical(answers$mode, "ma")) {
     J <- length(coll$products)
     if (J == 0 || !is.finite(d) || !is.finite(freq)) return(rows)
-    loy <- suppressWarnings(as.numeric(answers$loyalty %||% NA))
+    loy <- num1(answers$loyalty)
     r <- if (is.finite(loy)) exp(loy) / (exp(loy) + J - 1) else NA
-    beta <- suppressWarnings(as.numeric(answers$price_sensitivity))
+    beta <- num1(answers$price_sensitivity)
     K <- length(coll$attributes)
     u <- vapply(seq_len(J) - 1L, function(i) {
-      p <- suppressWarnings(as.numeric(answers[[paste0("line_price__",
-                                                       i)]]))
+      p <- num1(answers[[paste0("line_price__", i)]])
       s <- if (is.finite(beta) && is.finite(p)) beta * p else 0
       for (k in seq_len(K) - 1L) {
-        w <- suppressWarnings(as.numeric(
-          answers[[paste0("importance__", k)]]))
-        x <- suppressWarnings(as.numeric(
-          answers[[paste0("rating__", i, "__", k)]]))
+        w <- num1(answers[[paste0("importance__", k)]])
+        x <- num1(answers[[paste0("rating__", i, "__", k)]])
         if (is.finite(w) && is.finite(x)) s <- s + w * x
       }
       s
@@ -96,10 +103,8 @@ implied_summary <- function(spec, answers) {
     portfolio <- 0
     for (i in seq_len(J) - 1L) {
       if (!isTRUE(answers[[paste0("line_owned__", i)]])) next
-      p <- suppressWarnings(as.numeric(answers[[paste0("line_price__",
-                                                       i)]]))
-      cc <- suppressWarnings(as.numeric(answers[[paste0("line_cost__",
-                                                        i)]]))
+      p <- num1(answers[[paste0("line_price__", i)]])
+      cc <- num1(answers[[paste0("line_cost__", i)]])
       if (!is.finite(p) || !is.finite(cc) || !is.finite(r)) next
       m <- (p - cc) * freq * (qty %||% 1)
       v <- clv(m, r, d)
@@ -121,10 +126,10 @@ implied_summary <- function(spec, answers) {
     if (S == 0) return(rows)
     buyer <- answers$buyer_stage
     bi <- if (!is.null(buyer)) match(buyer, coll$stages) else S
-    stay <- suppressWarnings(as.numeric(
-      answers[[paste0("stage_stay__", bi - 1)]])) / 100
-    p <- suppressWarnings(as.numeric(answers$funnel_price))
-    cc <- suppressWarnings(as.numeric(answers$funnel_cost))
+    if (is.na(bi)) bi <- S            # renamed stages: fall back sanely
+    stay <- num1(answers[[paste0("stage_stay__", bi - 1)]]) / 100
+    p <- num1(answers$funnel_price)
+    cc <- num1(answers$funnel_cost)
     if (is.finite(stay) && is.finite(p) && is.finite(cc) &&
         is.finite(d) && is.finite(freq)) {
       m <- (p - cc) * freq * (qty %||% 1)
@@ -134,8 +139,7 @@ implied_summary <- function(spec, answers) {
                   money(m), 100 * stay, coll$stages[bi]),
           c("funnel_price", "funnel_cost",
             paste0("stage_stay__", bi - 1), "discount_rate"))
-      cnt <- suppressWarnings(as.numeric(
-        answers[[paste0("stage_count__", bi - 1)]]))
+      cnt <- num1(answers[[paste0("stage_count__", bi - 1)]])
       if (is.finite(cnt)) {
         add("Buyer pool rough-up", money(cnt * v),
             sprintf("%s current buyers x that lifetime value",

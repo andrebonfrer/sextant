@@ -41,3 +41,33 @@ test_that("implied_summary computes funnel buyer value from the stay rate", {
   b <- rows[[which(grepl("buyer", labels))[1]]]
   expect_equal(b$value, "$17")
 })
+
+test_that("implied_summary is total: every partial answer state returns, never errors", {
+  spec <- question_spec()
+  partials <- list(
+    list(mode = "ma", n_products = 2),                       # the crash
+    list(mode = "ma", n_products = 2, n_attributes = 1,
+         line_price__0 = 10),                                # costs missing
+    list(mode = "ma", n_products = 3, loyalty = 1),          # no economics
+    list(mode = "funnel", n_stages = 3),                     # nothing else
+    list(mode = "funnel", n_stages = 2, buyer_stage = "Gone",# renamed away
+         funnel_price = 10, funnel_cost = 5,
+         stage_stay__0 = 50, discount_rate = 10, frequency = 1)
+  )
+  for (a in partials) {
+    expect_no_error(rows <- implied_summary(spec, a))
+    expect_true(is.list(rows))
+  }
+})
+
+test_that("the implied panel renders live at the exact partial state a user types through", {
+  shiny::testServer(app_server, {
+    invisible(output$`survey-section_ui`)
+    session$setInputs(`survey-mode` = "ma")
+    session$flushReact()
+    invisible(output$`survey-section_ui`)
+    session$setInputs(`survey-n_products` = 2)
+    session$flushReact()
+    expect_no_error(invisible(output$`implied-rows`))
+  })
+})
