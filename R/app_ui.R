@@ -5,11 +5,31 @@
 app_ui <- function(request) {
   tagList(
     golem_add_external_resources(),
-    fluidPage(
-      h1("sextant"),
-      p("Elicitation for Gyro parameter files. The interview UI arrives",
-        "in a later prompt; the question spec, transforms and builder",
-        "live in the package now.")
+    bslib::page_fillable(
+      theme = bslib::bs_theme(version = 5, primary = "#1c3a52",
+                              secondary = "#b08d3e"),
+      title = "sextant",
+      bslib::layout_columns(
+        col_widths = c(8, 4),
+        bslib::card(
+          bslib::card_header("sextant \u2014 the interview"),
+          bslib::card_body(mod_survey_ui("survey"))
+        ),
+        tagList(
+          bslib::card(
+            bslib::card_header("File"),
+            bslib::card_body(
+              fileInput("load_file", "Open a parameter file",
+                        accept = ".json", buttonLabel = "Browse\u2026"),
+              downloadButton("save_file", "Save parameter file"),
+              helpText("Saving validates against the Gyro schema and",
+                       "refuses an invalid file. Downloads never",
+                       "overwrite anything without your say-so.")
+            )
+          ),
+          mod_implied_ui("implied")
+        )
+      )
     )
   )
 }

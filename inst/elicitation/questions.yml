@@ -171,8 +171,8 @@ sections:
         wording: Is {product} one of yours?
         type: choice
         options:
-          - {label: Yes, ours, value: true}
-          - {label: A rival's, value: false}
+          - {label: "Yes, ours", value: true}
+          - {label: "A rival's", value: false}
         transform: to_logical
         help: Investments and pricing act only on your own lines.
         repetition: per_product

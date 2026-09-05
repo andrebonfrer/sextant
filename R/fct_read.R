@@ -86,8 +86,9 @@ pointer_get <- function(x, pointer) {
 #' @param params A parameter list from [read_params()].
 #' @return `file_to_answers()`: a list with `answers` (repopulated,
 #'   invertible ones only), `direct` (per instance: the raw parameter
-#'   value where the transform is not invertible), and `structural`
-#'   answers derived from the file's shape.
+#'   value where the transform is not invertible), `structural`
+#'   answers derived from the file's shape, and the file's existing
+#'   `annotations`, so provenance survives a load-edit-save cycle.
 #' @export
 file_to_answers <- function(spec, params) {
   structural <- list(mode = params$mode)
@@ -133,5 +134,6 @@ file_to_answers <- function(spec, params) {
       answers[[q$instance_id]] <- sextant_inverses[[q$transform]](v, ctx)
     }
   }
-  list(answers = answers, direct = direct, structural = structural)
+  list(answers = answers, direct = direct, structural = structural,
+       annotations = params$annotations %||% list())
 }

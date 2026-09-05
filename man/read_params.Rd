@@ -25,8 +25,9 @@ file_to_answers(spec, params)
 
 `file_to_answers()`: a list with `answers` (repopulated,
   invertible ones only), `direct` (per instance: the raw parameter
-  value where the transform is not invertible), and `structural`
-  answers derived from the file's shape.
+  value where the transform is not invertible), `structural`
+  answers derived from the file's shape, and the file's existing
+  `annotations`, so provenance survives a load-edit-save cycle.
 }
 \description{
 [read_params()] is the mirror of [write_params()]: schema-validated

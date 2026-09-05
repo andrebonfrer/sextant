@@ -14,8 +14,7 @@ on no Gyro internals and computes no equity.
 
 ## What is here now
 
-The interview's engine, ahead of its UI (which arrives in a later
-prompt):
+The interview and its engine:
 
 | Area | Functions |
 |---|---|
@@ -23,6 +22,7 @@ prompt):
 | Question spec | `question_spec()`, `instantiate_questions()` — `inst/elicitation/questions.yml` holds 8 sections of behavioural questions covering every schema-required parameter in both modes |
 | Answers to parameters | `apply_transform()`, `build_params()` — JSON-pointer assembly with the funnel residual rule (rows sum to one by construction) |
 | Response calibration | `fit_adbudg()` — deterministic ADBUDG fit from four anchors; wired as a linear read at planned spend, full fit preserved in the file's annotations |
+| Survey app | `run_app()` — the interview with live implied quantities (closed form), anchor curve plotting, load-and-edit with provenance that survives the round trip |
 
 ## The contract
 

@@ -152,3 +152,44 @@ apply_anchor_set <- function(params, q, answers, ctx) {
   params$annotations <- ann
   params
 }
+
+#' Assemble the annotated draft from survey state
+#'
+#' [build_params()] plus the provenance layer: every answered question
+#' whose source the survey tracked gets an annotation on its parameter
+#' path (`stated` or `benchmark`, with the optional rationale), except
+#' where the builder already wrote one (the anchor-set auto-annotation
+#' wins). Answers whose source is `file` - loaded and untouched - get
+#' no new annotation: the file already says what it says.
+#'
+#' @param spec,answers As in [build_params()].
+#' @param sources Named list, instance id -> "stated"/"benchmark"/"file".
+#' @param rationales Named list, `<instance id>__why` -> free text.
+#' @return An annotated parameter list ready for [write_params()].
+#' @export
+assemble_draft <- function(spec, answers, sources = list(),
+                           rationales = list(),
+                           prior_annotations = list()) {
+  p <- build_params(spec, answers)
+  inst <- instantiate_questions(spec, answers)
+  # start from the loaded file's provenance; the builder's anchor
+  # auto-annotations overlay it, and this session's tracked sources
+  # overlay in turn on the leaves the user actually touched
+  ann <- prior_annotations
+  for (k in names(p$annotations %||% list())) {
+    ann[[k]] <- p$annotations[[k]]
+  }
+  for (q in inst) {
+    if (is.null(q$param_path)) next
+    s <- sources[[q$instance_id]]
+    if (is.null(s) || identical(s, "file")) next
+    key <- sub("^/", "", q$param_path)
+    if (!is.null((p$annotations %||% list())[[key]])) next  # anchor wins
+    entry <- list(source = s)
+    why <- trimws(rationales[[paste0(q$instance_id, "__why")]] %||% "")
+    if (nzchar(why)) entry$rationale <- why
+    ann[[key]] <- entry
+  }
+  if (length(ann)) p$annotations <- ann
+  p
+}
