@@ -6,9 +6,45 @@ app_server <- function(input, output, session) {
   spec <- question_spec()
 
   load_rv <- reactiveVal(NULL)
+  restore_rv <- reactiveVal(NULL)
+  pending_draft <- reactiveVal(NULL)
+
+  # a draft stored by this browser on a previous visit is offered back
+  observeEvent(input$sextant_stored_draft, {
+    d <- draft_from_json(input$sextant_stored_draft)
+    req(!is.null(d), length(d$answers %||% list()) > 0)
+    pending_draft(d)
+    showModal(modalDialog(
+      title = "Resume your draft?",
+      sprintf("This browser holds a draft with %d answer(s), saved %s.",
+              length(d$answers), d$saved_at %||% "earlier"),
+      footer = tagList(
+        actionButton("restore_draft_no", "Discard"),
+        actionButton("restore_draft_yes", "Restore",
+                     class = "btn-primary")
+      ), easyClose = TRUE))
+  })
+  observeEvent(input$restore_draft_yes, {
+    restore_rv(pending_draft())
+    removeModal()
+  })
+  observeEvent(input$restore_draft_no, {
+    session$sendCustomMessage("sextant-draft-clear", list())
+    pending_draft(NULL)
+    removeModal()
+  })
+
   observeEvent(input$load_file, {
+    path <- input$load_file$datapath
+    # a draft restores; anything else must be a valid parameter file
+    d <- draft_from_json(paste(readLines(path, warn = FALSE),
+                               collapse = "\n"))
+    if (!is.null(d)) {
+      restore_rv(d)
+      return()
+    }
     got <- tryCatch({
-      params <- read_params(input$load_file$datapath)
+      params <- read_params(path)
       file_to_answers(spec, params)
     }, error = function(e) {
       showNotification(conditionMessage(e), type = "error",
@@ -63,12 +99,31 @@ app_server <- function(input, output, session) {
   survey <- mod_survey_server("survey", spec = spec,
                               load_r = reactive(load_rv()),
                               ai_r = reactive(ai_rv()),
-                              brief_r = reactive(input$brief %||% ""))
+                              brief_r = reactive(input$brief %||% ""),
+                              restore_r = reactive(restore_rv()))
 
   # the panel breathes with the survey but not with every keystroke
   answers_calm <- shiny::debounce(survey$answers, 600)
   mod_implied_server("implied", spec = spec,
                      answers_r = answers_calm, jump = survey$jump)
+
+  # autosave the draft into the visitor's own browser as they type
+  state_calm <- shiny::debounce(survey$state, 2000)
+  observe({
+    st <- state_calm()
+    req(length(st$answers) > 0)
+    session$sendCustomMessage("sextant-draft-store", list(
+      draft = draft_to_json(do.call(draft_payload, st))
+    ))
+  })
+
+  output$save_draft <- downloadHandler(
+    filename = function() paste0("sextant-draft-", Sys.Date(), ".json"),
+    content = function(file) {
+      writeLines(draft_to_json(do.call(draft_payload,
+                                       survey$state())), file)
+    }
+  )
 
   draft_params <- reactive({
     assemble_draft(spec, survey$answers(), survey$sources(),

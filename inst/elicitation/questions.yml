@@ -125,6 +125,7 @@ sections:
         type: number
         bounds: {min: 0}
         transform: identity
+        technical: market potential (customers per period)
         help: Everyone who could buy from someone, not just from you.
         benchmark: {value: 100000, note: A placeholder scale; replace with your market's size.}
       - id: frequency
@@ -159,6 +160,7 @@ sections:
         type: count_of_100
         bounds: {min: 0, max: 100}
         transform: count_of_100_to_proportion
+        technical: discount rate (per period)
         help: This is the price of waiting; bigger numbers make future gains count for less.
         benchmark: {value: 10, note: Ten per hundred is a common corporate planning default.}
 
@@ -189,11 +191,12 @@ sections:
       - id: nest_similarity
         section: lines
         param_path: /engine/nest_similarity
-        wording: When a customer walks away from one of your lines, out of 100 such customers, how many land on a sister line under the same parent rather than on a rival?
+        wording: Out of 100 customers who stop buying one of your lines, how many switch to another of your own lines under the same parent, rather than defect to a rival?
         type: count_of_100
         bounds: {min: 5, max: 100}
         transform: sister_share_to_similarity
-        help: Higher numbers mean your lines mostly trade customers with each other.
+        technical: within-brand similarity (nested-logit lambda)
+        help: This decides how much of any gain or loss stays in the family - high numbers mean investing in one line mostly reshuffles your own customers (cannibalisation), low numbers mean it pulls from rivals.
         benchmark: {value: 50, note: An even split is a neutral starting point.}
         depends_on: {question: mode, equals: ma}
 
@@ -207,6 +210,7 @@ sections:
         type: number
         bounds: {min: 0, max: 2}
         transform: identity
+        technical: attribute part-worth (utility per rating point)
         help: 1 means a one-point gap matters a normal amount.
         benchmark: {value: 1, note: Equal weighting is the neutral default.}
         repetition: per_attribute
@@ -218,6 +222,7 @@ sections:
         type: number
         bounds: {min: 1, max: 5}
         transform: identity
+        technical: perceived attribute rating (1 to max)
         help: Rate as the market sees it, not as you wish it were.
         repetition: [per_product, per_attribute]
         depends_on: {question: mode, equals: ma}
@@ -228,6 +233,7 @@ sections:
         type: number
         bounds: {min: -2, max: 0}
         transform: identity
+        technical: price coefficient (beta, utility per dollar)
         help: Use more negative numbers for markets where small price gaps move many customers.
         benchmark: {value: -0.2, note: Mild price sensitivity; adjust to your category.}
         depends_on: {question: mode, equals: ma}
@@ -238,6 +244,7 @@ sections:
         type: number
         bounds: {min: 0, max: 5}
         transform: identity
+        technical: state dependence (inertia, utility bonus)
         help: This is inertia toward whatever a customer bought last time.
         benchmark: {value: 1, note: Moderate habit; subscription markets often run higher.}
         depends_on: {question: mode, equals: ma}
@@ -304,6 +311,7 @@ sections:
         type: count_of_100
         bounds: {min: 0, max: 100}
         transform: count_of_100_to_proportion
+        technical: stage conversion rate
         help: Movement forward only; staying put is the next question.
         repetition: per_stage
         skip_last: true
@@ -315,6 +323,7 @@ sections:
         type: count_of_100
         bounds: {min: 0, max: 100}
         transform: count_of_100_to_proportion
+        technical: stage retention (repeat rate at the buying stage)
         help: The rest - neither advancing nor staying - drop back to the start of the journey.
         repetition: per_stage
         depends_on: {question: mode, equals: funnel}
@@ -357,6 +366,7 @@ sections:
         type: number
         bounds: {min: 0, max: 2}
         transform: identity
+        technical: marketing uplift (delta rating if funded)
         help: This is the judgement the whole proposal rests on; half a point is already a lot.
         repetition: [per_bucket, per_attribute]
         depends_on: {question: mode, equals: ma}
@@ -367,6 +377,7 @@ sections:
         type: count_of_100
         bounds: {min: 0, max: 100}
         transform: count_of_100_to_proportion
+        technical: marketing uplift (delta conversion if funded)
         help: Added forward movement on top of what already happens.
         repetition: [per_bucket, per_stage]
         skip_last: true

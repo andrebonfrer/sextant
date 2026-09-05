@@ -88,3 +88,41 @@ test_that("spinner-style entry (stepping, clearing to NA) never crashes the pane
     }
   })
 })
+
+test_that("legibility rows translate coefficients into shares, hand-checked", {
+  spec <- question_spec()
+  a <- ma_answers()
+  rows <- implied_summary(spec, a)
+  labels <- vapply(rows, `[[`, "", "label")
+
+  # hand calculation of the softmax shares:
+  # u = beta*price + sum(w * rating); beta=-0.3, w=(1,1)
+  u <- c(-0.3 * 10 + 4 + 3, -0.3 * 9 + 3 + 4, -0.3 * 10 + 3 + 3)
+  sh <- exp(u - max(u)); sh <- sh / sum(sh)
+
+  i <- which(labels == "Implied starting shares")
+  expect_length(i, 1)
+  expect_match(rows[[i]]$value, sprintf("%.0f%%", 100 * sh[1]))
+  expect_match(rows[[i]]$detail, "Rival X")
+  expect_true("price_sensitivity" %in% rows[[i]]$drivers)
+
+  # +1 rating point on the top-weight attribute: 100 * s(1-s) * w
+  pp <- 100 * sh[1] * (1 - sh[1]) * 1
+  j <- grep("One rating point", labels)
+  expect_match(rows[[j]]$value, sprintf("%+.1f pp", pp), fixed = TRUE)
+
+  # $1 price cut: 100 * s(1-s) * |beta|
+  ppp <- 100 * sh[1] * (1 - sh[1]) * 0.3
+  k <- grep("price cut", labels)
+  expect_match(rows[[k]]$value, sprintf("%+.1f pp", ppp), fixed = TRUE)
+})
+
+test_that("legibility rows stay silent until ratings and importance exist", {
+  spec <- question_spec()
+  rows <- implied_summary(spec, list(mode = "ma", n_products = 2,
+                                     line_owned__0 = TRUE,
+                                     line_price__0 = 10,
+                                     line_cost__0 = 6))
+  labels <- vapply(rows, `[[`, "", "label")
+  expect_false(any(grepl("Implied starting shares", labels)))
+})

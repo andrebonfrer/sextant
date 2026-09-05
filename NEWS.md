@@ -1,5 +1,16 @@
 # sextant (development version)
 
+* Field-driven round (thanks Andre): sections scroll back to the top on
+  navigation; every key judgement carries its technical parameter name
+  alongside the plain wording (the no-jargon guardrail, revised by its
+  author); the within-brand similarity question now states its purpose
+  - the cannibalisation split; the implied panel gains legibility rows
+  that translate coefficients into consequences (implied starting
+  shares, share points per rating point and per dollar of price); and
+  drafts - the browser autosaves as you type and offers to resume on
+  return, and a draft file can be downloaded and later dropped on the
+  loader, which restores it instead of validating it.
+
 * AI layer (Prompt 3), propose-review-commit only: prefill_from_brief()
   answers the questionnaire - never the schema - from a free-text
   brief, with omission preferred over invention; answers pass the same

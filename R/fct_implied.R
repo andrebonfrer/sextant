@@ -89,17 +89,61 @@ implied_summary <- function(spec, answers) {
     r <- if (is.finite(loy)) exp(loy) / (exp(loy) + J - 1) else NA
     beta <- num1(answers$price_sensitivity)
     K <- length(coll$attributes)
+    w_vec <- vapply(seq_len(K) - 1L, function(k) {
+      num1(answers[[paste0("importance__", k)]])
+    }, 0)
+    any_rating <- FALSE
     u <- vapply(seq_len(J) - 1L, function(i) {
       p <- num1(answers[[paste0("line_price__", i)]])
       s <- if (is.finite(beta) && is.finite(p)) beta * p else 0
       for (k in seq_len(K) - 1L) {
-        w <- num1(answers[[paste0("importance__", k)]])
         x <- num1(answers[[paste0("rating__", i, "__", k)]])
-        if (is.finite(w) && is.finite(x)) s <- s + w * x
+        if (is.finite(w_vec[k + 1]) && is.finite(x)) {
+          s <- s + w_vec[k + 1] * x
+          any_rating <<- TRUE
+        }
       }
       s
     }, 0)
     shares <- softmax(u)
+
+    # Legibility rows: translate the hard-to-intuit coefficients into
+    # consequences a manager can dispute. All closed form, first period,
+    # holding rivals fixed - the label says so.
+    first_owned <- NA_integer_
+    for (i in seq_len(J) - 1L) {
+      if (isTRUE(answers[[paste0("line_owned__", i)]])) {
+        first_owned <- i; break
+      }
+    }
+    if (any_rating && any(is.finite(w_vec)) && is.finite(first_owned)) {
+      split <- paste(sprintf("%s %.0f%%", coll$products, 100 * shares),
+                     collapse = " \u00b7 ")
+      add("Implied starting shares",
+          sprintf("%.0f%% (%s)", 100 * shares[first_owned + 1],
+                  coll$products[first_owned + 1]),
+          paste0(split, " \u2014 what the ratings, importance and prices",
+                 " you gave imply before any dynamics. If this split",
+                 " looks wrong, the coefficients are wrong."),
+          c("rating__0__0", "importance__0", "price_sensitivity"))
+
+      s1 <- shares[first_owned + 1]
+      kstar <- which.max(ifelse(is.finite(w_vec), w_vec, -Inf)) - 1L
+      pp_rating <- 100 * s1 * (1 - s1) * w_vec[kstar + 1]
+      add(sprintf("One rating point on %s", coll$attributes[kstar + 1]),
+          sprintf("%+.1f pp share", pp_rating),
+          sprintf("for %s at current settings \u2014 the market's",
+                  coll$products[first_owned + 1]),
+          c(paste0("importance__", kstar)))
+      if (is.finite(beta)) {
+        pp_price <- 100 * s1 * (1 - s1) * abs(beta)
+        add("A $1 price cut",
+            sprintf("%+.1f pp share", pp_price),
+            sprintf("for %s, rivals holding still \u2014 what your price
+coefficient means in shares", coll$products[first_owned + 1]),
+            "price_sensitivity")
+      }
+    }
     portfolio <- 0
     for (i in seq_len(J) - 1L) {
       if (!isTRUE(answers[[paste0("line_owned__", i)]])) next

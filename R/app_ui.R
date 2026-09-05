@@ -13,7 +13,8 @@ app_ui <- function(request) {
         col_widths = c(8, 4),
         bslib::card(
           bslib::card_header("sextant \u2014 the interview"),
-          bslib::card_body(mod_survey_ui("survey"))
+          bslib::card_body(div(id = "sextant-survey-top",
+                               mod_survey_ui("survey")))
         ),
         tagList(
           bslib::card(

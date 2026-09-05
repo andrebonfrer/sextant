@@ -159,6 +159,7 @@ instantiate_questions <- function(spec, answers) {
         wording = fill(q$wording),
         help = fill(q$help),
         param_path = fill(q$param_path),
+        technical = fill(q$technical),
         type = q$type,
         transform = q$transform %||% "identity",
         bounds = q$bounds,

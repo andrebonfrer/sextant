@@ -28,7 +28,8 @@ mod_survey_ui <- function(id) {
 #' @noRd
 mod_survey_server <- function(id, spec, load_r = reactive(NULL),
                               ai_r = reactive(NULL),
-                              brief_r = reactive("")) {
+                              brief_r = reactive(""),
+                              restore_r = reactive(NULL)) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
 
@@ -83,6 +84,24 @@ mod_survey_server <- function(id, spec, load_r = reactive(NULL),
                   paste(utils::head(got$notes, 3), collapse = " | "))
                 else ""),
         type = "message", duration = 10)
+    })
+
+    observeEvent(restore_r(), {
+      d <- restore_r()
+      req(is_draft(d))
+      rv_ans(d$answers %||% list())
+      rv_src(d$sources %||% list())
+      rv_rat(d$rationales %||% list())
+      rv_ai(d$ai %||% character())
+      rv_direct(d$direct %||% list())
+      rv_prior_ann(d$prior_annotations %||% list())
+      section_i(1L)
+      bump()
+      showNotification(
+        sprintf("Draft restored: %d answer(s), saved %s.",
+                length(d$answers %||% list()),
+                d$saved_at %||% "earlier"),
+        type = "message", duration = 6)
     })
 
     observeEvent(load_r(), {
@@ -289,12 +308,16 @@ mod_survey_server <- function(id, spec, load_r = reactive(NULL),
             sprintf("Default shown: %s \u2014 %s", q$benchmark$value,
                     q$benchmark$note))
         },
+        if (!is.null(q$technical)) {
+          p(class = "text-muted small mb-1",
+            tags$em(paste0("Parameter: ", q$technical)))
+        },
         p(class = "text-muted small mb-1", q$help),
         if (!is.null(isolate(rv_direct())[[iid]])) {
           p(class = "small",
             sprintf("Currently in the file: %s (not re-askable directly;
 answering here replaces it).",
-                    paste(round(as.numeric(rv_direct()[[iid]]), 4),
+                    paste(round(suppressWarnings(as.numeric(unlist(rv_direct()[[iid]]))), 4),
                           collapse = ", ")))
         },
         tags$details(
@@ -321,15 +344,21 @@ answering here replaces it).",
       tagList(lapply(insts, widget_for))
     })
 
+    scroll_top <- function() {
+      session$sendCustomMessage("sextant-scroll-top", list())
+    }
+
     observeEvent(input$nxt, {
       section_i(min(section_i() + 1L, length(visible_sections())))
       highlight(NULL)
       bump()
+      scroll_top()
     })
     observeEvent(input$back, {
       section_i(max(section_i() - 1L, 1L))
       highlight(NULL)
       bump()
+      scroll_top()
     })
 
     jump <- function(qid) {
@@ -342,6 +371,7 @@ answering here replaces it).",
           section_i(i)
           highlight(base)
           bump()
+          scroll_top()
           return(invisible())
         }
       }
@@ -353,6 +383,11 @@ answering here replaces it).",
       rationales = reactive(rv_rat()),
       direct = reactive(rv_direct()),
       prior_annotations = reactive(rv_prior_ann()),
+      state = reactive(list(
+        answers = rv_ans(), sources = rv_src(),
+        rationales = rv_rat(), ai = rv_ai(),
+        direct = rv_direct(), prior_annotations = rv_prior_ann()
+      )),
       jump = jump,
       .render_count = function() renders$n
     )
